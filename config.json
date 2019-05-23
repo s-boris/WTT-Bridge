@@ -1,0 +1,9 @@
+{
+  "Telegram": {
+    "token": "TOKEN"
+  },
+  "Whatsapp": {
+    "phone": "PHONENUMBER",
+    "password": "PASSWORD"
+  }
+}
