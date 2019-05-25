@@ -41,11 +41,6 @@ class WhatsappLayer(YowInterfaceLayer):
             messageOut = "Unknown message type %s " % messageProtocolEntity.getType()
             print(messageOut.toProtocolTreeNode())
 
-        # echo example
-        # outgoingMessageProtocolEntity = TextMessageProtocolEntity(messageProtocolEntity.getBody(),
-        #                                                          to=messageProtocolEntity.getFrom())
-        # self.toLower(outgoingMessageProtocolEntity)
-
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):
         ack = OutgoingAckProtocolEntity(entity.getId(), "receipt", entity.getType(), entity.getFrom())
@@ -58,10 +53,10 @@ class WhatsappLayer(YowInterfaceLayer):
     def onTextMessage(self, messageProtocolEntity):
         if not messageProtocolEntity.isGroupMessage():
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
-                             messageProtocolEntity.getBody())
+                             messageProtocolEntity.getBody().encode('latin-1').decode())
         else:
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
-                             messageProtocolEntity.getBody(),
+                             messageProtocolEntity.getBody().encode('latin-1').decode(),
                              group=self.groupIdToAlias(messageProtocolEntity.getFrom()))
             self.get_group_info(messageProtocolEntity.getFrom())  # TODO
 
@@ -101,7 +96,8 @@ class WhatsappLayer(YowInterfaceLayer):
         def onGroupsListResult(successEntity, originalEntity):
             global groups
             for group in successEntity.getGroups():
-                groups.append({"groupId": group.getId(), "subject": group.getSubject()})
+                groups.append({"groupId": group.getId(), "subject": group.getSubject().encode('latin-1').decode()})
+                logger.debug("Groups updated")
 
         def onGroupsListError(errorEntity, originalEntity):
             logger.error("Error retrieving groups")
@@ -110,6 +106,7 @@ class WhatsappLayer(YowInterfaceLayer):
         self._sendIq(entity, onGroupsListResult, onGroupsListError)
 
     def groupIdToAlias(self, groupId):
+        rest = groupId.split('@', 1)[0]
         for group in groups:
-            if group["groupId"] == groupId:
+            if group["groupId"] == rest:
                 return group["subject"]
