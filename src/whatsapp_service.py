@@ -3,15 +3,14 @@ from yowsup.layers import YowParallelLayer
 from yowsup.layers.auth import YowAuthenticationProtocolLayer
 from yowsup.layers.protocol_messages import YowMessagesProtocolLayer
 from yowsup.layers.protocol_receipts import YowReceiptProtocolLayer
+from yowsup.layers.protocol_iq import YowIqProtocolLayer
+from yowsup.layers.protocol_groups import YowGroupsProtocolLayer
 from yowsup.layers.protocol_acks import YowAckProtocolLayer
 from yowsup.layers.network import YowNetworkLayer
-from yowsup.layers.coder import YowCoderLayer
-from yowsup.stacks import YowStack
 from yowsup.common import YowConstants
 from yowsup.layers import YowLayerEvent
 from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
 from yowsup.layers.axolotl import AxolotlControlLayer, AxolotlSendLayer, AxolotlReceivelayer
-from yowsup.env import YowsupEnv
 from consonance.structs.keypair import KeyPair
 import base64
 
@@ -32,7 +31,7 @@ def run(q, config):
     layers = (
                  WhatsappLayer,
                  YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer,
-                                   YowAckProtocolLayer]),
+                                   YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer]),
                  AxolotlControlLayer,
                  YowParallelLayer((AxolotlSendLayer, AxolotlReceivelayer)),
              ) + YOWSUP_CORE_LAYERS
@@ -45,4 +44,4 @@ def run(q, config):
 
     stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))  # sending the connect signal
 
-    stack.loop()  # this is the program mainloop
+    stack.loop()
