@@ -1,13 +1,9 @@
 from threading import Thread
-import logging
 from queue import Queue
 
 import setup
 import src.telegram_service as tg
 import src.whatsapp_service as wa
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
-logger = logging.getLogger("WTT-Bridge")
 
 msg_q = Queue(maxsize=0)
 

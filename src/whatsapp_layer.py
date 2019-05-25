@@ -6,23 +6,24 @@ from yowsup.layers.protocol_groups.protocolentities import ListGroupsResultIqPro
 from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
+from src.models import WTTMessage
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 groups = []
 
 
 class WhatsappLayer(YowInterfaceLayer):
 
-    @ProtocolEntityCallback("message")
-    def onMessage(self, messageProtocolEntity):
-        # send receipt otherwise we keep receiving the same message over and over
+    def __init__(self, message_queue=None):
+        super().__init__()
+        self.message_queue = message_queue
 
-        if True:
-            receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
-                                                    'read', messageProtocolEntity.getParticipant())
-            outgoingMessageProtocolEntity = TextMessageProtocolEntity(messageProtocolEntity.getBody(),
-                                                                      to=messageProtocolEntity.getFrom())
-            self.toLower(receipt)
-            self.toLower(outgoingMessageProtocolEntity)
+    @ProtocolEntityCallback("success")
+    def onSuccess(self, entity):
+        logger.info('Connected with WhatsApp servers')
+        self.update_groups()
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):

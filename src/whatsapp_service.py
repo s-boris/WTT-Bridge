@@ -14,14 +14,8 @@ from yowsup.layers.axolotl import AxolotlControlLayer, AxolotlSendLayer, Axolotl
 from consonance.structs.keypair import KeyPair
 import base64
 
-msg_q = None
-CREDENTIALS = None
 
-
-def run(q, config):
-    global msg_q, CREDENTIALS
-    msg_q = q
-
+def run(message_queue, config):
     keypair = KeyPair.from_bytes(
         base64.b64decode(config["password"])
     )
@@ -29,7 +23,7 @@ def run(q, config):
     CREDENTIALS = (config["phone"], keypair)
 
     layers = (
-                 WhatsappLayer,
+                 WhatsappLayer(message_queue=message_queue),
                  YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer,
                                    YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer]),
                  AxolotlControlLayer,

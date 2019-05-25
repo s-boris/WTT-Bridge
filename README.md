@@ -19,5 +19,5 @@ https://en.wikipedia.org/wiki/Mobile_country_code
 2.2 When you receive the verification sms, run ```yowsup-cli registration --register 123456 --config-phone 49XXXXXXXX``` to verify your number
 
 
-### Notes
+## Notes
  
