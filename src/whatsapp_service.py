@@ -12,6 +12,8 @@ from yowsup.layers import YowLayerEvent
 from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
 from yowsup.layers.axolotl import AxolotlControlLayer, AxolotlSendLayer, AxolotlReceivelayer
 from yowsup.env import YowsupEnv
+from consonance.structs.keypair import KeyPair
+import base64
 
 msg_q = None
 CREDENTIALS = None
@@ -20,7 +22,12 @@ CREDENTIALS = None
 def run(q, config):
     global msg_q, CREDENTIALS
     msg_q = q
-    CREDENTIALS = (config["phone"], config["password"])
+
+    keypair = KeyPair.from_bytes(
+        base64.b64decode(config["password"])
+    )
+
+    CREDENTIALS = (config["phone"], keypair)
 
     layers = (
                  WhatsappLayer,
