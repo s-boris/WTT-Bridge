@@ -5,37 +5,41 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 msg_q = None
+config = None
+dpg = None
 
 
-def run(message_queue, config):
-    global msg_q
+def run(message_queue, cfg):
+    global msg_q, config, dpg
     msg_q = message_queue
+    config = cfg
 
     updater = Updater(config['token'], use_context=True)
     dp = updater.dispatcher
 
-    start_handler = CommandHandler('start', start)
-
-    dp.add_handler(start_handler)
     dp.add_error_handler(error)
 
     updater.start_polling()
 
     dp.job_queue.run_repeating(msg_listener, 5)
 
+    dpg = dp
+
 
 def msg_listener(context):
     if not msg_q.empty():
         msg = msg_q.get()
         if msg.group:
-            context.bot.send_message(chat_id=user_id, text="{}: @ {}\n\n{}".format(msg.author, msg.group, msg.body))
+            for gId in dpg.groups:
+                if context.bot.get_chat(gId).title == msg.group:
+                    context.bot.send_message(chat_id=gId,
+                                             text="{}:\n\n{}".format(msg.author, msg.group, msg.body))
+                else:
+                    context.bot.send_message(chat_id=config['owner'],
+                                             text="{}: @ {}\n\n{}".format(msg.author, msg.group, msg.body))
         else:
-            context.bot.send_message(chat_id=user_id, text="{}:\n\n{}".format(msg.author, msg.body))
+            context.bot.send_message(chat_id=config['owner'], text="{}:\n\n{}".format(msg.author, msg.body))
         msg_q.task_done()
-
-
-def start(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text="I'm a bot, please talk to me!")
 
 
 def error(update, context):

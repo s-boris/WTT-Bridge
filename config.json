@@ -1,6 +1,7 @@
 {
   "Telegram": {
-    "token": "TOKEN"
+    "token": "TOKEN",
+    "owner": "OWNERID"
   },
   "Whatsapp": {
     "phone": "PHONENUMBER",
