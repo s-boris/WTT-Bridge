@@ -34,9 +34,9 @@ def msg_listener(context):
         msg = msg_q.get()
 
         if msg.group:
-            send(context, msg.group, msg)
+            send(context, "[WA]" + msg.group, msg)
         else:
-            send(context, msg.author, msg)
+            send(context, "[WA]" + msg.author, msg)
         msg_q.task_done()
 
 
@@ -48,7 +48,7 @@ def send(context, toChannelName, msg):
             return True
 
     # group not found
-    creation_q.put(msg.group)
+    creation_q.put(toChannelName)
     while not creation_q.empty():
         logger.info("Group not found, initiated creation...")
         time.sleep(1)
