@@ -1,11 +1,14 @@
 from threading import Thread
 from queue import Queue
 import asyncio
+import logging
 
 import setup
 import src.telegram_selfbot as tgs
 import src.telegram_bot as tg
 import src.whatsapp_selfbot as wa
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 msg_q = Queue(maxsize=0)
 creation_q = Queue(maxsize=0)

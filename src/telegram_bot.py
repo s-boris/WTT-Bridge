@@ -1,7 +1,6 @@
 import logging
 from telegram.ext import Updater, CommandHandler
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 msg_q = None
