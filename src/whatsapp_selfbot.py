@@ -17,7 +17,7 @@ import base64
 
 def run(message_queue, config):
     keypair = KeyPair.from_bytes(
-        base64.b64decode(config["password"])
+        base64.b64decode(config["client_static_keypair"])
     )
 
     credentials = (config["phone"], keypair)

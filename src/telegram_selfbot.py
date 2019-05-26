@@ -11,7 +11,7 @@ async def run(creation_q, cfg):
     global config
     config = cfg
 
-    client = await TelegramClient('anon', config["api_id"], config["api_hash"]).start()
+    client = await TelegramClient('anon', int(config["api_id"]), config["api_hash"]).start()
 
     while True:
         if not creation_q.empty():

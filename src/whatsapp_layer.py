@@ -64,7 +64,7 @@ class WhatsappLayer(YowInterfaceLayer):
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
                              messageProtocolEntity.getBody())
             self.getGroupInfo(
-                messageProtocolEntity.getFrom())  # TODO run on startup in an interval and listen to updates instead
+                messageProtocolEntity.getFrom())  # TODO run on startup and listen to updates instead
 
         self.message_queue.put(msg)
 
