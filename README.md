@@ -5,23 +5,59 @@ To make it as seamless as possible, the bot will simulate conversations on Teleg
 
 >TODO screenshot
 
+## Installation
 
+1. Download WTT-Bridge:
+
+    ```bash
+    sudo apt-get install git
+    git clone https://github.com/Neolysion/WTT-Bridge.git WTT-Bridge
+    cd WTT-Bridge
+ 
+    ```
+
+2. Make sure you have at least Python 3.6 with python-dev and pip installed.
+    Example for Ubuntu 16.04:
+    
+    ```bash
+    sudo add-apt-repository ppa:jonathonf/python-3.6
+    sudo apt-get update
+    sudo apt-get install python3.6
+    sudo apt-get install python3.6-dev
+    wget https://bootstrap.pypa.io/get-pip.py
+    sudo python3.6 get-pip.py
+ 
+    ```
+
+3. Install the libraries:
+    
+    ```bash
+    sudo pip3.6 install -r requirements.txt
+ 
+    ```
+    
+4. Check the next section on how to setup your config file. When you're done you can start the bot with:
+ 
+     ```bash
+    python3.6 run.py
+ 
+    ```
 
 ## Configuration
 
-You have to fill out all values in the config.json to run the bot:
+You have to fill out all values in the config.json to run the bot. Here is as some info how you can find each value:
 
 #### Telegram: 
 
-- "token": Talk to https://telegram.me/botfather and create a bot to get a token
+- "bot_token": Talk to https://telegram.me/botfather and create a bot to get a token
+
+- "bot_username": The username you gave your bot (with the @ in front)
 
 - "api_id" and "api_hash": Visit https://my.telegram.org/
 
-- "owner": You can talk to @getidsbot to get your telegram ID 
-
 #### Whatsapp:
 
-- "phonenumber": your phone number with country code but without + or 0 at the beginning
+- "phone": your phone number with country code but without + or 0 at the beginning
 
 - "client_static_keypar": to get your keypair do the following: 
 
