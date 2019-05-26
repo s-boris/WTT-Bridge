@@ -1,10 +1,13 @@
 {
   "Telegram": {
-    "token": "TOKEN",
-    "owner": "OWNERID"
+    "bot_token": "token",
+    "bot_username": "@botusername",
+    "owner": "ownerID",
+    "api_id": appId,
+    "api_hash": "appHash"
   },
   "Whatsapp": {
-    "phone": "PHONENUMBER",
-    "password": "PASSWORD"
+    "phone": "phonenumber",
+    "password": "client_static_keypair"
   }
 }
