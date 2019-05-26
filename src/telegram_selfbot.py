@@ -18,7 +18,7 @@ async def run(creation_q, cfg):
             group = creation_q.get()
             exists = False
 
-            for dialog in client.iter_dialogs():
+            async for dialog in client.iter_dialogs():
                 if dialog.title == group:
                     exists = True
                     logger.debug('Group chat "{}" already exists'.format(group))
