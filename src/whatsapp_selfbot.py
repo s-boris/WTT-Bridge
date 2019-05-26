@@ -20,7 +20,7 @@ def run(message_queue, config):
         base64.b64decode(config["password"])
     )
 
-    CREDENTIALS = (config["phone"], keypair)
+    credentials = (config["phone"], keypair)
 
     layers = (
                  WhatsappLayer(message_queue=message_queue),
@@ -31,7 +31,7 @@ def run(message_queue, config):
              ) + YOWSUP_CORE_LAYERS
 
     stack = YowStack(layers)
-    stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, CREDENTIALS)  # setting credentials
+    stack.setProp(YowAuthenticationProtocolLayer.PROP_CREDENTIALS, credentials)  # setting credentials
     stack.setProp(YowNetworkLayer.PROP_ENDPOINT, YowConstants.ENDPOINTS[0])  # whatsapp server address
     # stack.setProp(YowCoderLayer.PROP_DOMAIN, YowConstants.DOMAIN)
     # stack.setProp(YowCoderLayer.PROP_RESOURCE, YowsupEnv.getCurrent().getResource()) #info about us as WhatsApp client

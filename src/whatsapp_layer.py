@@ -56,14 +56,13 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.error("Login Failed, reason: %s" % entity.getReason())
 
     def onTextMessage(self, messageProtocolEntity):
-        if not messageProtocolEntity.isGroupMessage():
-            msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
-                             messageProtocolEntity.getBody())
-        else:
+        if messageProtocolEntity.isGroupMessage():
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
                              messageProtocolEntity.getBody(),
                              group=self.groupIdToSubject(messageProtocolEntity.getFrom()))
-
+        else:
+            msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
+                             messageProtocolEntity.getBody())
             self.getGroupInfo(
                 messageProtocolEntity.getFrom())  # TODO run on startup in an interval and listen to updates instead
 
