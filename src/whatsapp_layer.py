@@ -1,9 +1,9 @@
 import logging
 import base64
+import time
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_groups.protocolentities import ListGroupsResultIqProtocolEntity, \
     ListParticipantsResultIqProtocolEntity, ListGroupsIqProtocolEntity, InfoGroupsIqProtocolEntity
-from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from src.models import WTTMessage
@@ -12,6 +12,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 groups = []
+groups_ready = False
 
 
 class WhatsappLayer(YowInterfaceLayer):
@@ -23,7 +24,7 @@ class WhatsappLayer(YowInterfaceLayer):
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
         logger.info('Connected with WhatsApp servers')
-        self.update_groups()
+        self.updateGroups()
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
@@ -32,14 +33,18 @@ class WhatsappLayer(YowInterfaceLayer):
                                                 'read', messageProtocolEntity.getParticipant())
         self.toLower(receipt)
 
+        # wait for the groups to be fetched before handling any incoming messages
+        while not groups_ready:
+            logger.debug("Groups not ready, retrying in 2sec...")
+            time.sleep(2)
+
         # do stuff with the message
         if messageProtocolEntity.getType() == 'text':
             self.onTextMessage(messageProtocolEntity)
         elif messageProtocolEntity.getType() == 'media':
             self.onMediaMessage(messageProtocolEntity)
         else:
-            messageOut = "Unknown message type %s " % messageProtocolEntity.getType()
-            print(messageOut.toProtocolTreeNode())
+            logger.error("Unknown message type %s " % messageProtocolEntity.getType())
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):
@@ -48,17 +53,19 @@ class WhatsappLayer(YowInterfaceLayer):
 
     @ProtocolEntityCallback("failure")
     def onFailure(self, entity):
-        print("Login Failed, reason: %s" % entity.getReason())
+        logger.error("Login Failed, reason: %s" % entity.getReason())
 
     def onTextMessage(self, messageProtocolEntity):
         if not messageProtocolEntity.isGroupMessage():
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
-                             messageProtocolEntity.getBody().encode('latin-1').decode())
+                             messageProtocolEntity.getBody())
         else:
             msg = WTTMessage(messageProtocolEntity.MESSAGE_TYPE_TEXT, messageProtocolEntity.getNotify(),
-                             messageProtocolEntity.getBody().encode('latin-1').decode(),
-                             group=self.groupIdToAlias(messageProtocolEntity.getFrom()))
-            self.get_group_info(messageProtocolEntity.getFrom())  # TODO
+                             messageProtocolEntity.getBody(),
+                             group=self.groupIdToSubject(messageProtocolEntity.getFrom()))
+
+            self.getGroupInfo(
+                messageProtocolEntity.getFrom())  # TODO run on startup in an interval and listen to updates instead
 
         self.message_queue.put(msg)
 
@@ -88,16 +95,17 @@ class WhatsappLayer(YowInterfaceLayer):
             media_key=base64.b64encode(message.media_key)
         )
 
-    def get_group_info(self, groupId):
+    def getGroupInfo(self, groupId):
         entity = InfoGroupsIqProtocolEntity(groupId)
         self.toLower(entity)
 
-    def update_groups(self):
+    def updateGroups(self):
         def onGroupsListResult(successEntity, originalEntity):
-            global groups
+            global groups, groups_ready
             for group in successEntity.getGroups():
                 groups.append({"groupId": group.getId(), "subject": group.getSubject().encode('latin-1').decode()})
                 logger.debug("Groups updated")
+                groups_ready = True
 
         def onGroupsListError(errorEntity, originalEntity):
             logger.error("Error retrieving groups")
@@ -105,7 +113,7 @@ class WhatsappLayer(YowInterfaceLayer):
         entity = ListGroupsIqProtocolEntity()
         self._sendIq(entity, onGroupsListResult, onGroupsListError)
 
-    def groupIdToAlias(self, groupId):
+    def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]
         for group in groups:
             if group["groupId"] == rest:
