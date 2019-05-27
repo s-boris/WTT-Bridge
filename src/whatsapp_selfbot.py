@@ -15,7 +15,7 @@ from consonance.structs.keypair import KeyPair
 import base64
 
 
-def run(message_queue, config):
+def run(wttQueue, config):
     keypair = KeyPair.from_bytes(
         base64.b64decode(config["client_static_keypair"])
     )
@@ -23,7 +23,7 @@ def run(message_queue, config):
     credentials = (config["phone"], keypair)
 
     layers = (
-                 WhatsappLayer(message_queue=message_queue),
+                 WhatsappLayer(wttQueue),
                  YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer,
                                    YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer]),
                  AxolotlControlLayer,

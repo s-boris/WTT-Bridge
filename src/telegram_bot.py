@@ -2,20 +2,22 @@ import logging
 import time
 
 from telegram.ext import Updater, CommandHandler
+from src.models import *
+import setup
 
 logger = logging.getLogger(__name__)
 
-msg_q = None
-creation_q = None
+wttQ = None
+tgsQ = None
 config = None
 dpg = None
 
 
-def run(message_queue, creation_queue, cfg):
-    global msg_q, creation_q, config, dpg
-    msg_q = message_queue
+def run(wttQueue, tgsQueue, cfg):
+    global wttQ, tgsQ, config, dpg
     config = cfg
-    creation_q = creation_queue
+    wttQ = wttQueue
+    tgsQ = tgsQueue
 
     updater = Updater(config['bot_token'], use_context=True)
     dp = updater.dispatcher
@@ -24,40 +26,38 @@ def run(message_queue, creation_queue, cfg):
 
     updater.start_polling()
 
-    dp.job_queue.run_repeating(msg_listener, 5)
+    dp.job_queue.run_repeating(msgListener, 1)
 
     dpg = dp
 
 
-def msg_listener(context):
-    if not msg_q.empty():
-        msg = msg_q.get()
-
-        if msg.group:
-            send(context, "[WA]" + msg.group, msg)
-        else:
-            send(context, "[WA]" + msg.author, msg)
-        msg_q.task_done()
+def msgListener(context):
+    if not wttQ.empty() and isinstance(wttQ.queue[0], PrivateMessage):
+        msg = wttQ.get()
+        send(context, "[WA]" + msg.author, msg)
+        wttQ.task_done()
+    elif not wttQ.empty() and isinstance(wttQ.queue[0], GroupMessage):
+        msg = wttQ.get()
+        send(context, "[WA]" + msg.group, msg)
+        wttQ.task_done()
 
 
 def send(context, toChannelName, msg):
-    # try sending
-    for gId in dpg.groups:
-        if context.bot.get_chat(gId).title == toChannelName:
-            context.bot.send_message(chat_id=gId, text="{}:\n\n{}".format(msg.author, msg.body))
-            return True
+    # lookup channel mapping
+    chatMap = setup.get_chatmap()
+    if toChannelName in chatMap:
+        context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'], text="{}:\n\n{}".format(msg.author, msg.body))
+        return True
+    else:
+        tgsQ.put((toChannelName, msg))
+        while toChannelName not in chatMap:  # TODO dirty
+            chatMap = setup.get_chatmap()
+            logger.info("Group not found, waiting for creation...")
+            time.sleep(1)
 
-    # group not found
-    creation_q.put(toChannelName)
-    while not creation_q.empty():
-        logger.info("Group not found, initiated creation...")
-        time.sleep(1)
-
-    # try again
-    for gId in dpg.groups:
-        if context.bot.get_chat(gId).title == toChannelName:
-            context.bot.send_message(chat_id=gId, text="{}:\n\n{}".format(msg.author, msg.body))
-            return True
+    # we should be fine now
+    context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'], text="{}:\n\n{}".format(msg.author, msg.body))
+    return True
 
 
 def error(update, context):
