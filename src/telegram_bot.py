@@ -41,7 +41,7 @@ def msgListener(context):
         wttQ.task_done()
     elif not wttQ.empty() and isinstance(wttQ.queue[0], GroupMessage):
         msg = wttQ.get()
-        send(context, "[WA]" + msg.group, msg)
+        send(context, "[WA]" + msg.title, msg)
         wttQ.task_done()
 
 
