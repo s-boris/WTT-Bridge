@@ -22,7 +22,7 @@ class WhatsappLayer(YowInterfaceLayer):
         super().__init__()
         self.wttQ = wttQueue
 
-        # msg = PrivateMessage('text', "Testboy", "Testmessage", waID="1234")
+        # msg = PrivateMessage('text', "Testboy7", "Testmessage", waID="1234")
         # self.wttQ.put(msg)
 
     @ProtocolEntityCallback("success")

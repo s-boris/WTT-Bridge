@@ -54,7 +54,7 @@ def send(context, toChannelName, msg):
         while not toChannelName in chatMap:  # TODO dirty
             chatMap = setup.get_chatmap()
             logger.info("Group not found, waiting for creation...")
-            time.sleep(1)
+            time.sleep(0.5)
 
     # we should be fine now
     context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'], text="{}:\n\n{}".format(msg.author, msg.body))

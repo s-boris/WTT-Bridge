@@ -20,26 +20,25 @@ async def run(tgsQ, cfg):
     while True:
         if not tgsQ.empty():
             chatName, msg = tgsQ.get()
-            exists = False
             chatMap = setup.get_chatmap()
             tgID = None
 
-            async for dialog in client.iter_dialogs():
-                if dialog.title == chatName:
-                    exists = True
-                    logger.debug('Group chat "{}" already exists'.format(chatName))
-                    tgID = dialog.id
-
-            if not exists:
+            if not chatName in chatMap:
                 chat = await client(CreateChatRequest(
                     users=[config["bot_username"]],
                     title=chatName
                 ))
                 logger.debug('Created new group chat "{}"'.format(chatName))
-                tgID = chat.id
+                tgID = '-' + str(chat.chats[0].id)
+
+            # async for dialog in client.iter_dialogs():
+            #     if dialog.title == chatName:
+            #         exists = True
+            #         logger.debug('Group chat "{}" already exists'.format(chatName))
+            #         tgID = dialog.id
 
             chatMap[chatName] = {"waID": msg.waID, "tgID": tgID}
             setup.save_chatmap(chatMap)
 
             tgsQ.task_done()
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.25)
