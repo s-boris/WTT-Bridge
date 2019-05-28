@@ -97,7 +97,7 @@ class WhatsappLayer(YowInterfaceLayer):
 
     def onMediaMessage(self, messageProtocolEntity):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document"):
-            print("Received media")
+            logger.info("Received media message")
             self.mediaWorker.enqueue(messageProtocolEntity)
         else:
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
@@ -111,7 +111,7 @@ class WhatsappLayer(YowInterfaceLayer):
 
     def processOfflineMessages(self):
         while not self.offlineMsgQ.empty():
-            self.onMediaMessage(self.offlineMsgQ.get())
+            self.onMessage(self.offlineMsgQ.get())
             self.offlineMsgQ.task_done()
 
     def onGroupListReceived(self, entity):

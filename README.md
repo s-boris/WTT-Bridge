@@ -77,6 +77,8 @@ https://en.wikipedia.org/wiki/Mobile_country_code
  - Forward text and media messages from Whatsapp to Telegram
  
  TODO:
+ - show participants
+ - initiate chats from telegram
  - videos
  - location (live sharing?)
  - contacts
