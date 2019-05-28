@@ -13,6 +13,7 @@ from yowsup.layers.protocol_groups import YowGroupsProtocolLayer
 from yowsup.layers.protocol_iq import YowIqProtocolLayer
 from yowsup.layers.protocol_messages import YowMessagesProtocolLayer
 from yowsup.layers.protocol_receipts import YowReceiptProtocolLayer
+from yowsup.layers.protocol_media import *
 from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
 
 from src.whatsapp_layer import WhatsappLayer
@@ -32,7 +33,7 @@ def run(wttQueue, config):
     layers = (
                  WhatsappLayer(wttQueue),
                  YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer,
-                                   YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer]),
+                                   YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer, YowMediaProtocolLayer]),
                  AxolotlControlLayer,
                  YowParallelLayer((AxolotlSendLayer, AxolotlReceivelayer)),
              ) + YOWSUP_CORE_LAYERS

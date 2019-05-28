@@ -1,11 +1,14 @@
 import base64
 import logging
 import time
+from queue import Queue
 
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
+from yowsup.layers.protocol_media.protocolentities import *
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
+from src.media_worker import MediaWorker
 
 from src.models import *
 
@@ -21,14 +24,21 @@ class WhatsappLayer(YowInterfaceLayer):
     def __init__(self, wttQueue):
         super().__init__()
         self.wttQ = wttQueue
-
+        self.mediaWorker = None
+        self.preMsgQ = Queue()
         # msg = PrivateMessage('text', "Testboy7", "Testmessage", waID="1234")
         # self.wttQ.put(msg)
 
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
         logger.info('Connected with WhatsApp servers')
-        self.updateGroups()
+
+        logger.info('Fetching Whatsapp groups')
+        self.toLower(ListGroupsIqProtocolEntity())
+
+        logger.info("Starting MediaWorker")
+        self.mediaWorker = MediaWorker(self.wttQ, groups)
+        self.mediaWorker.start()
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
@@ -38,20 +48,44 @@ class WhatsappLayer(YowInterfaceLayer):
         self.toLower(receipt)
 
         # wait for the groups to be fetched before handling any incoming messages
-        while not groups_ready:
-            logger.debug("Groups not ready, retrying in 2sec...")
-            time.sleep(2)
+        if not groups_ready:
+            logger.debug("Waiting with message delivery, groups not ready")
+            self.preMsgQ.put(messageProtocolEntity)  # TODO try processing them later
+            return
 
-        mtype, body = self.parseMessage(messageProtocolEntity)
-        logging.debug("Received message from " + messageProtocolEntity.getNotify() + ": " + body)
+        # handle media messages
+        if isinstance(messageProtocolEntity, MediaMessageProtocolEntity):
+            self.onMediaMessage(messageProtocolEntity)
+            return
+        # handle all other kinds of messages
+        elif messageProtocolEntity.getType() == 'text':
+            mtype = messageProtocolEntity.getType()
+            body = messageProtocolEntity.getBody()
+            logging.info("Received message from " + messageProtocolEntity.getNotify() + ": " + body)
+        elif messageProtocolEntity.media_type == "location":
+            media = "location (%s, %s) to %s" % (
+                messageProtocolEntity.getLatitude(), messageProtocolEntity.getLongitude(),
+                messageProtocolEntity.getFrom(False))
+            print(media)  # TODO handle this
+            return
+        elif messageProtocolEntity.media_type == "contact":
+            media = "contact (%s, %s) to %s" % (
+                messageProtocolEntity.getName(), messageProtocolEntity.getCardData(),
+                messageProtocolEntity.getFrom(False))
+            print(media)  # TODO handle this
+            return
+        else:
+            logger.error("Unknown message type %s " % messageProtocolEntity.getType())
+            return False
 
-        # do stuff with the message
+        # pack the message into our models
         if messageProtocolEntity.isGroupMessage():
             msg = GroupMessage(mtype, messageProtocolEntity.getNotify(), body,
                                self.groupIdToSubject(messageProtocolEntity.getFrom()),
                                waID=messageProtocolEntity.getFrom())
         else:
             msg = PrivateMessage(mtype, messageProtocolEntity.getNotify(), body, waID=messageProtocolEntity.getFrom())
+
         self.wttQ.put(msg)
 
     @ProtocolEntityCallback("receipt")
@@ -63,62 +97,52 @@ class WhatsappLayer(YowInterfaceLayer):
     def onFailure(self, entity):
         logger.error("Login Failed, reason: %s" % entity.getReason())
 
-    def parseMessage(self, messageProtocolEntity):
-
-        if messageProtocolEntity.getType() == 'text':
-            return messageProtocolEntity.getType(), messageProtocolEntity.getBody()
-
-        elif messageProtocolEntity.getType() == 'media':
-            if messageProtocolEntity.media_type in ("image", "audio", "video", "document"):
-                print("Received media")
-                media = self.getDownloadableMediaMessageBody(messageProtocolEntity)
-                return messageProtocolEntity.media_type, media
-
-            elif messageProtocolEntity.media_type == "location":
-                media = "location (%s, %s) to %s" % (
-                    messageProtocolEntity.getLatitude(), messageProtocolEntity.getLongitude(),
-                    messageProtocolEntity.getFrom(False))
-                print(media)
-                return messageProtocolEntity.media_type, media
-
-            elif messageProtocolEntity.media_type == "contact":
-                media = "contact (%s, %s) to %s" % (
-                    messageProtocolEntity.getName(), messageProtocolEntity.getCardData(),
-                    messageProtocolEntity.getFrom(False))
-                print(media)
-                return messageProtocolEntity.media_type, media
+    def onMediaMessage(self, messageProtocolEntity):
+        if messageProtocolEntity.media_type in ("image", "audio", "video", "document"):
+            print("Received media")
+            self.mediaWorker.enqueue(messageProtocolEntity)
         else:
-            logger.error("Unknown message type %s " % messageProtocolEntity.getType())
+            logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
 
-    def getDownloadableMediaMessageBody(self, message):
-        return "[media_type={media_type}, length={media_size}, url={media_url}, key={media_key}]".format(
-            media_type=message.media_type,
-            media_size=message.file_length,
-            media_url=message.url,
-            media_key=base64.b64encode(message.media_key)
-        )
+    # def getDownloadableMediaMessageBody(self, message):
+    #     return "[media_type={media_type}, length={media_size}, url={media_url}, key={media_key}]".format(
+    #         media_type=message.media_type,
+    #         media_size=message.file_length,
+    #         media_url=message.url,
+    #         media_key=base64.b64encode(message.media_key)
+    #     )
+
+    @ProtocolEntityCallback("iq")
+    def onIq(self, entity):
+        if isinstance(entity, ListGroupsResultIqProtocolEntity):
+            self.onGroupListReceived(entity)
+        elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
+            self.onGroupParticipantsReceived(entity)
+
+    def onGroupListReceived(self, entity):
+        global groups_ready, groups
+        for group in entity.getGroups():
+            logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
+                         group.getSubject())
+            groups.append({"groupId": group.getId(), "subject": group.getSubject().encode('latin-1').decode()})
+            # self.toLower(ParticipantsGroupsIqProtocolEntity(group.getId()))
+
+        groups_ready = True  # this is sufficient info to handle incoming messages
+
+        logger.info("Starting MediaWorker")
+        self.mediaWorker = MediaWorker(self.wttQ, groups)
+        self.mediaWorker.start()
+
+        # self.getGroupInfo()  # TODO listen to updates instead?
+        logger.debug("Groups updated")
+
+    def onGroupParticipantsReceived(self, entity):
+        logger.debug('Received %d participants in group with id %s', len(entity.getParticipants()), entity.getFrom())
+        # self._groups[entity.getFrom()]._participants = entity.getParticipants()
 
     def getGroupInfo(self, groupId):
         entity = InfoGroupsIqProtocolEntity(groupId)
         self.toLower(entity)
-
-    def updateGroups(self):
-        def onGroupsListResult(successEntity, originalEntity):
-            global groups, groups_ready
-
-            for group in successEntity.getGroups():
-                groups.append({"groupId": group.getId(), "subject": group.getSubject().encode('latin-1').decode()})
-
-            groups_ready = True  # this is sufficient info to handle incoming messages
-
-            # self.getGroupInfo()  # TODO listen to updates instead?
-            logger.debug("Groups updated")
-
-        def onGroupsListError(errorEntity, originalEntity):
-            logger.error("Error retrieving groups")
-
-        entity = ListGroupsIqProtocolEntity()
-        self._sendIq(entity, onGroupsListResult, onGroupsListError)
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]

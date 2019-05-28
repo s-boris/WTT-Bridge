@@ -1,5 +1,7 @@
 import logging
 import time
+from io import BytesIO
+from PIL import Image
 
 from telegram.ext import Updater
 
@@ -47,7 +49,15 @@ def send(context, toChannelName, msg):
     # lookup channel mapping
     chatMap = setup.get_chatmap()
     if toChannelName in chatMap:
-        context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'], text="{}:\n\n{}".format(msg.author, msg.body))
+        if msg.type == "text":
+            context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'],
+                                     text="{}:\n\n{}".format(msg.author, msg.body))
+        elif msg.type == "image":
+            bio = BytesIO(msg.body)
+            img = Image.open(bio)
+            img.save(bio, 'JPEG')
+            bio.seek(0)
+            context.bot.send_photo(chat_id=chatMap[toChannelName]['tgID'], photo=bio)
         return True
     else:
         tgsQ.put((toChannelName, msg))
