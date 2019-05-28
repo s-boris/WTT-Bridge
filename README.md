@@ -1,7 +1,7 @@
 # WTT-Bridge (WIP)
 
-A Bot that forwards conversations and media from Whatsapp to Telegram. 
-To make it as seamless as possible, the bot will simulate conversations on Telegram by creating a separate group chat for each Whatsapp conversation and forward the messages accordingly.
+Syncronize your conversations and media between Whatsapp and Telegram. 
+To make it as seamless as possible, the WTT-Bridge will simulate conversations on Telegram by creating a separate group chat for each Whatsapp conversation and forward all messages accordingly.
 
 >TODO screenshot
 
@@ -83,9 +83,7 @@ https://en.wikipedia.org/wiki/Mobile_country_code
  TODO:
  - show participants
  - initiate chats from telegram
- - videos
  - location (live sharing?)
  - contacts
- - voice message
  - Sync receipts
  - Sync group info and pictures
