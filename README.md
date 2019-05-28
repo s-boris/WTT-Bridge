@@ -73,3 +73,10 @@ https://en.wikipedia.org/wiki/Mobile_country_code
 
 ## Notes
  
+ Working:
+ - Forward text messages from Whatsapp to Telegram
+ 
+ TODO:
+ - Forward media messages from Whatsapp to Telegram
+ - Reply to Whatsapp messages in Telegram
+ - Sync group info and pictures
