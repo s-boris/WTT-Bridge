@@ -1,9 +1,10 @@
 import logging
 import time
 
-from telegram.ext import Updater, CommandHandler
-from src.models import *
+from telegram.ext import Updater
+
 import setup
+from src.models import *
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,6 @@ def run(wttQueue, tgsQueue, cfg):
     dp = updater.dispatcher
 
     dp.add_error_handler(error)
-
     updater.start_polling()
 
     dp.job_queue.run_repeating(msgListener, 1)
@@ -50,7 +50,7 @@ def send(context, toChannelName, msg):
         return True
     else:
         tgsQ.put((toChannelName, msg))
-        while toChannelName not in chatMap:  # TODO dirty
+        while not toChannelName in chatMap:  # TODO dirty
             chatMap = setup.get_chatmap()
             logger.info("Group not found, waiting for creation...")
             time.sleep(1)
