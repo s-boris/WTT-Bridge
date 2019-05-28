@@ -45,7 +45,7 @@ To make it as seamless as possible, the bot will simulate conversations on Teleg
 
 ## Configuration
 
-You have to fill out all values in the config.json to run the bot. Here is as some info how you can find each value:
+You have to rename the config_template.json to config.json and fill in all the values to run the bot. Here is as some info how you can find each value:
 
 #### Telegram: 
 
@@ -54,6 +54,8 @@ You have to fill out all values in the config.json to run the bot. Here is as so
 - "bot_username": The username you gave your bot (with the @ in front)
 
 - "api_id" and "api_hash": Visit https://my.telegram.org/
+
+Note: Disable privacy mode on your bot using @botfather or you won't be able to reply to Whatsapp messages in Telegram.
 
 #### Whatsapp:
 
@@ -74,7 +76,9 @@ https://en.wikipedia.org/wiki/Mobile_country_code
 ## Notes
  
  Working:
- - Forward text and media messages from Whatsapp to Telegram
+ - Messages from Whatsapp to Telegram (text, images)
+ - Messages from Telegram to Whatsapp (text) 
+ 
  
  TODO:
  - show participants
@@ -83,6 +87,5 @@ https://en.wikipedia.org/wiki/Mobile_country_code
  - location (live sharing?)
  - contacts
  - voice message
- - Reply to Whatsapp messages in Telegram
  - Sync receipts
  - Sync group info and pictures

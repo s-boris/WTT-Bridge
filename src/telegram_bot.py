@@ -4,7 +4,7 @@ from io import BytesIO
 
 import telegram
 from PIL import Image
-from telegram.ext import Updater
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 import setup
 from src.models import *
@@ -12,15 +12,17 @@ from src.models import *
 logger = logging.getLogger(__name__)
 
 wttQ = None
+ttwQ = None
 tgsQ = None
 config = None
 dpg = None
 
 
-def run(wttQueue, tgsQueue, cfg):
-    global wttQ, tgsQ, config, dpg
+def run(wttQueue, ttwQueue, tgsQueue, cfg):
+    global wttQ, ttwQ, tgsQ, config, dpg
     config = cfg
     wttQ = wttQueue
+    ttwQ = ttwQueue
     tgsQ = tgsQueue
 
     logger.info("Starting Telegram Bot")
@@ -28,25 +30,43 @@ def run(wttQueue, tgsQueue, cfg):
     dp = updater.dispatcher
 
     dp.add_error_handler(error)
+    dp.add_handler(CommandHandler("participants", participants))
+    dp.add_handler(MessageHandler(Filters.text, onMessage))
     updater.start_polling()
 
-    dp.job_queue.run_repeating(msgListener, 1)
+    dp.job_queue.run_repeating(wttMessageListener, 1)
 
     dpg = dp
 
 
-def msgListener(context):
+def onMessage(update, context):
+    tgID = update.effective_chat.id
+
+    if update.message.from_user.is_bot:
+        return
+
+    if update.message.text:
+        chatMap = setup.get_chatmap()
+        for key in chatMap:
+            if int(chatMap[key]["tgID"]) == tgID:
+                # doesn't really matter if private or group message
+                ttwQ.put(PrivateMessage('text', update.message.from_user.first_name, update.message.text,
+                                        waID=chatMap[key]["waID"]))
+                return
+
+
+def wttMessageListener(context):
     if not wttQ.empty() and isinstance(wttQ.queue[0], PrivateMessage):
         msg = wttQ.get()
-        send(context, "[WA]" + msg.author, msg)
+        sendWttMessage(context, "[WA]" + msg.author, msg)
         wttQ.task_done()
     elif not wttQ.empty() and isinstance(wttQ.queue[0], GroupMessage):
         msg = wttQ.get()
-        send(context, "[WA]" + msg.title, msg)
+        sendWttMessage(context, "[WA]" + msg.title, msg)
         wttQ.task_done()
 
 
-def send(context, toChannelName, msg):
+def sendWttMessage(context, toChannelName, msg):
     sent = False
 
     while not sent:
@@ -72,6 +92,11 @@ def send(context, toChannelName, msg):
                 tgsQ.put((toChannelName, msg))
             logger.info("Group not found, waiting for creation...")
             time.sleep(1)  # TODO we might get stuck in this loop....
+
+
+def participants(update, context):
+    """Send a message when the command /participants issued."""
+    update.message.reply_text('Hi!')
 
 
 def error(update, context):

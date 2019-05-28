@@ -21,7 +21,7 @@ from src.whatsapp_layer import WhatsappLayer
 logger = logging.getLogger(__name__)
 
 
-def run(wttQueue, config):
+def run(wttQueue, ttwQueue, config):
     logger.info("Starting Whatsapp Self-Bot")
 
     keypair = KeyPair.from_bytes(
@@ -31,7 +31,7 @@ def run(wttQueue, config):
     credentials = (config["phone"], keypair)
 
     layers = (
-                 WhatsappLayer(wttQueue),
+                 WhatsappLayer(wttQueue, ttwQueue),
                  YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer,
                                    YowAckProtocolLayer, YowIqProtocolLayer, YowGroupsProtocolLayer,
                                    YowMediaProtocolLayer]),

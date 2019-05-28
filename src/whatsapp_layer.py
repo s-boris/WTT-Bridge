@@ -1,10 +1,12 @@
 import logging
 from queue import Queue
+from threading import Thread
 
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_media.protocolentities import *
+from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
 
 from src.media_worker import MediaWorker
@@ -19,11 +21,13 @@ groups_ready = False
 
 class WhatsappLayer(YowInterfaceLayer):
 
-    def __init__(self, wttQueue):
+    def __init__(self, wttQueue, ttwQueue):
         super().__init__()
         self.wttQ = wttQueue
+        self.ttwQ = ttwQueue
         self.mediaWorker = None
         self.offlineMsgQ = Queue()
+
         # msg = PrivateMessage('text', "Testboy7", "Testmessage", waID="1234")
         # self.wttQ.put(msg)
 
@@ -37,6 +41,18 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.info("Starting MediaWorker")
         self.mediaWorker = MediaWorker(self.wttQ, groups)
         self.mediaWorker.start()
+
+        logger.info("Listening for Telegram messages")
+        tgListener = Thread(target=self.telegramMessageListener)
+        tgListener.start()
+
+    def telegramMessageListener(self):
+        while True:
+            if not self.ttwQ.empty():
+                msg = self.ttwQ.get()
+                outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
+                self.toLower(outgoingMessageProtocolEntity)
+                self.ttwQ.task_done()
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):

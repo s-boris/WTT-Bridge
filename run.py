@@ -11,6 +11,7 @@ import src.whatsapp_selfbot as wa
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 wttQ = Queue(maxsize=0)
+ttwQ = Queue(maxsize=0)
 tgsQ = Queue(maxsize=0)
 
 
@@ -22,8 +23,8 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
     tgs_thread = Thread(target=loopInThread, args=(loop,))
-    tg_thread = Thread(target=tg.run, args=(wttQ, tgsQ, setup.get_tg_config(),))
-    wa_thread = Thread(target=wa.run, args=(wttQ, setup.get_wa_config(),))
+    tg_thread = Thread(target=tg.run, args=(wttQ, ttwQ, tgsQ, setup.get_tg_config(),))
+    wa_thread = Thread(target=wa.run, args=(wttQ, ttwQ, setup.get_wa_config(),))
 
     try:
         tgs_thread.start()
