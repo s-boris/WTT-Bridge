@@ -77,6 +77,10 @@ https://en.wikipedia.org/wiki/Mobile_country_code
  - Forward text and media messages from Whatsapp to Telegram
  
  TODO:
+ - videos
+ - location (live sharing?)
+ - contacts
+ - voice message
  - Reply to Whatsapp messages in Telegram
  - Sync receipts
  - Sync group info and pictures
