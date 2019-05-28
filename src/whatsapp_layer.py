@@ -1,6 +1,4 @@
-import base64
 import logging
-import time
 from queue import Queue
 
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
@@ -8,8 +6,8 @@ from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEnti
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_media.protocolentities import *
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
-from src.media_worker import MediaWorker
 
+from src.media_worker import MediaWorker
 from src.models import *
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -103,14 +101,6 @@ class WhatsappLayer(YowInterfaceLayer):
             self.mediaWorker.enqueue(messageProtocolEntity)
         else:
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
-
-    # def getDownloadableMediaMessageBody(self, message):
-    #     return "[media_type={media_type}, length={media_size}, url={media_url}, key={media_key}]".format(
-    #         media_type=message.media_type,
-    #         media_size=message.file_length,
-    #         media_url=message.url,
-    #         media_key=base64.b64encode(message.media_key)
-    #     )
 
     @ProtocolEntityCallback("iq")
     def onIq(self, entity):

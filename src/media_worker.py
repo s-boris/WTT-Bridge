@@ -68,9 +68,6 @@ class MediaWorker(threading.Thread):
         return None
 
     def _write(self, media_message_protocolentity, data):
-        length_kb = int(math.ceil(len(data) / 1024))
-        progress = self._create_progress_iterator(range(length_kb), length_kb, "Write          ")
-
         # pack the message into our models
         if media_message_protocolentity.isGroupMessage():
             msg = GroupMessage(media_message_protocolentity.media_type, media_message_protocolentity.getNotify(), data,

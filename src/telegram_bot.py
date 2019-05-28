@@ -1,8 +1,8 @@
 import logging
 import time
 from io import BytesIO
-from PIL import Image
 
+from PIL import Image
 from telegram.ext import Updater
 
 import setup

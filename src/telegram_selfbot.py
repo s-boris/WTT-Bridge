@@ -31,12 +31,6 @@ async def run(tgsQ, cfg):
                 logger.debug('Created new group chat "{}"'.format(chatName))
                 tgID = '-' + str(chat.chats[0].id)
 
-            # async for dialog in client.iter_dialogs():
-            #     if dialog.title == chatName:
-            #         exists = True
-            #         logger.debug('Group chat "{}" already exists'.format(chatName))
-            #         tgID = dialog.id
-
             chatMap[chatName] = {"waID": msg.waID, "tgID": tgID}
             setup.save_chatmap(chatMap)
 
