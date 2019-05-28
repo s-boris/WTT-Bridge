@@ -68,15 +68,15 @@ class MediaWorker(threading.Thread):
 
         return None
 
-    def _write(self, media_message_protocolentity, data):
+    def _write(self, media_message_protocolentity, data, filename):
         # pack the message into our models
         if media_message_protocolentity.isGroupMessage():
             msg = GroupMessage(media_message_protocolentity.media_type, media_message_protocolentity.getNotify(), data,
                                self.groupIdToSubject(media_message_protocolentity.getFrom()),
-                               waID=media_message_protocolentity.getFrom())
+                               waID=media_message_protocolentity.getFrom(), filename=filename)
         else:
             msg = PrivateMessage(media_message_protocolentity.media_type, media_message_protocolentity.getNotify(),
-                                 data, waID=media_message_protocolentity.getFrom())
+                                 data, waID=media_message_protocolentity.getFrom(), filename=filename)
 
         self.wttQ.put(msg)
 
@@ -141,7 +141,7 @@ class MediaWorker(threading.Thread):
                 filename_full = "%s.%s" % (filename, fileext)
             else:
                 filename_full = filename
-            if self._write(media_message_protocolentity, filedata):
+            if self._write(media_message_protocolentity, filedata, filename_full):
                 logger.info("Pushing processed media...")
             else:
                 continue

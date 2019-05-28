@@ -112,7 +112,7 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.error("Login Failed, reason: %s" % entity.getReason())
 
     def onMediaMessage(self, messageProtocolEntity):
-        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif"):
+        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
             logger.info("Received media message")
             self.mediaWorker.enqueue(messageProtocolEntity)
         else:

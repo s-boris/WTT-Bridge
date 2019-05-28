@@ -85,6 +85,14 @@ def sendWttMessage(context, toChannelName, msg):
             elif msg.type == "video" or msg.type == "gif":
                 bio = BytesIO(msg.body)
                 context.bot.send_video(chat_id=chatMap[toChannelName]['tgID'], video=bio, caption=msg.author)
+            elif msg.type == "audio" or msg.type == "ptt":
+                bio = BytesIO(msg.body)
+                context.bot.send_audio(chat_id=chatMap[toChannelName]['tgID'], audio=bio, caption=msg.author,
+                                       title=msg.filename)
+            elif msg.type == "document":
+                bio = BytesIO(msg.body)
+                context.bot.send_document(chat_id=chatMap[toChannelName]['tgID'], document=bio, caption=msg.author,
+                                          filename=msg.filename)
             sent = True
         else:
             if (toChannelName, msg) not in tgsQ.queue:
