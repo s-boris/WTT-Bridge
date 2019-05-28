@@ -74,7 +74,7 @@ def sendWttMessage(context, toChannelName, msg):
         if toChannelName in chatMap:
             if msg.type == "text":
                 context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'],
-                                         text="*{}*:\n\n{}".format(msg.author, msg.body),
+                                         text="*{}*:\n{}".format(msg.author, msg.body),
                                          parse_mode=telegram.ParseMode.MARKDOWN)
             elif msg.type == "image":
                 bio = BytesIO(msg.body)
@@ -82,10 +82,9 @@ def sendWttMessage(context, toChannelName, msg):
                 img.save(bio, 'JPEG')
                 bio.seek(0)
                 context.bot.send_photo(chat_id=chatMap[toChannelName]['tgID'], photo=bio, caption=msg.author)
-            elif msg.type == "video":
+            elif msg.type == "video" or msg.type == "gif":
                 bio = BytesIO(msg.body)
-                # TODO
-                # context.bot.send_video(chat_id=chatMap[toChannelName]['tgID'], video=bio, caption=msg.author)
+                context.bot.send_video(chat_id=chatMap[toChannelName]['tgID'], video=bio, caption=msg.author)
             sent = True
         else:
             if (toChannelName, msg) not in tgsQ.queue:

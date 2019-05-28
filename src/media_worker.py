@@ -1,6 +1,7 @@
 import base64
 import logging
 import threading
+import time
 from queue import Queue
 
 import math
@@ -84,6 +85,9 @@ class MediaWorker(threading.Thread):
     def run(self):
         logger.debug("MediaWorker started")
         while True:
+            if self._jobs.empty():
+                time.sleep(1)
+                continue
             media_message_protocolentity = self._jobs.get()
             if media_message_protocolentity is None:
                 logger.error("MediaMessageEntity is none")

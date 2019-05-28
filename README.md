@@ -76,7 +76,7 @@ https://en.wikipedia.org/wiki/Mobile_country_code
 ## Notes
  
  Working:
- - Messages from Whatsapp to Telegram (text, images)
+ - Messages from Whatsapp to Telegram (text, images, video, gifs)
  - Messages from Telegram to Whatsapp (text) 
  
  
