@@ -20,6 +20,7 @@ def run(wttQueue, tgsQueue, cfg):
     wttQ = wttQueue
     tgsQ = tgsQueue
 
+    logger.info("Starting Telegram Bot")
     updater = Updater(config['bot_token'], use_context=True)
     dp = updater.dispatcher
 

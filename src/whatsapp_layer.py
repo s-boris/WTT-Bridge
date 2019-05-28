@@ -1,10 +1,12 @@
-import logging
 import base64
+import logging
 import time
+
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
+from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
-from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
+
 from src.models import *
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
@@ -41,6 +43,7 @@ class WhatsappLayer(YowInterfaceLayer):
             time.sleep(2)
 
         mtype, body = self.parseMessage(messageProtocolEntity)
+        logging.debug("Received message from " + messageProtocolEntity.getNotify() + ": " + body)
 
         # do stuff with the message
         if messageProtocolEntity.isGroupMessage():
@@ -63,7 +66,7 @@ class WhatsappLayer(YowInterfaceLayer):
     def parseMessage(self, messageProtocolEntity):
 
         if messageProtocolEntity.getType() == 'text':
-            return messageProtocolEntity.getType(), messageProtocolEntity
+            return messageProtocolEntity.getType(), messageProtocolEntity.getBody()
 
         elif messageProtocolEntity.getType() == 'media':
             if messageProtocolEntity.media_type in ("image", "audio", "video", "document"):

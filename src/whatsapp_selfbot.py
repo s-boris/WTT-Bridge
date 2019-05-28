@@ -1,21 +1,28 @@
-from src.whatsapp_layer import WhatsappLayer
-from yowsup.layers import YowParallelLayer
-from yowsup.layers.auth import YowAuthenticationProtocolLayer
-from yowsup.layers.protocol_messages import YowMessagesProtocolLayer
-from yowsup.layers.protocol_receipts import YowReceiptProtocolLayer
-from yowsup.layers.protocol_iq import YowIqProtocolLayer
-from yowsup.layers.protocol_groups import YowGroupsProtocolLayer
-from yowsup.layers.protocol_acks import YowAckProtocolLayer
-from yowsup.layers.network import YowNetworkLayer
+import base64
+import logging
+
+from consonance.structs.keypair import KeyPair
 from yowsup.common import YowConstants
 from yowsup.layers import YowLayerEvent
-from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
+from yowsup.layers import YowParallelLayer
+from yowsup.layers.auth import YowAuthenticationProtocolLayer
 from yowsup.layers.axolotl import AxolotlControlLayer, AxolotlSendLayer, AxolotlReceivelayer
-from consonance.structs.keypair import KeyPair
-import base64
+from yowsup.layers.network import YowNetworkLayer
+from yowsup.layers.protocol_acks import YowAckProtocolLayer
+from yowsup.layers.protocol_groups import YowGroupsProtocolLayer
+from yowsup.layers.protocol_iq import YowIqProtocolLayer
+from yowsup.layers.protocol_messages import YowMessagesProtocolLayer
+from yowsup.layers.protocol_receipts import YowReceiptProtocolLayer
+from yowsup.stacks import YowStack, YOWSUP_CORE_LAYERS
+
+from src.whatsapp_layer import WhatsappLayer
+
+logger = logging.getLogger(__name__)
 
 
 def run(wttQueue, config):
+    logger.info("Starting Whatsapp Self-Bot")
+
     keypair = KeyPair.from_bytes(
         base64.b64decode(config["client_static_keypair"])
     )

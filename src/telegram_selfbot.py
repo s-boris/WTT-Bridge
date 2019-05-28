@@ -1,7 +1,9 @@
 import asyncio
 import logging
+
 from telethon import TelegramClient
 from telethon.tl.functions.messages import CreateChatRequest
+
 import setup
 
 logger = logging.getLogger(__name__)
@@ -12,6 +14,7 @@ async def run(tgsQ, cfg):
     global config
     config = cfg
 
+    logger.info("Starting Telegram Self-Bot")
     client = await TelegramClient('anon', int(config["api_id"]), config["api_hash"]).start()
 
     while True:

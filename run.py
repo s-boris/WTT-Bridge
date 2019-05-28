@@ -1,11 +1,11 @@
-from threading import Thread
-from queue import Queue
 import asyncio
 import logging
+from queue import Queue
+from threading import Thread
 
 import setup
-import src.telegram_selfbot as tgs
 import src.telegram_bot as tg
+import src.telegram_selfbot as tgs
 import src.whatsapp_selfbot as wa
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
