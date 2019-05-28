@@ -25,7 +25,7 @@ class WhatsappLayer(YowInterfaceLayer):
         super().__init__()
         self.wttQ = wttQueue
         self.mediaWorker = None
-        self.preMsgQ = Queue()
+        self.offlineMsgQ = Queue()
         # msg = PrivateMessage('text', "Testboy7", "Testmessage", waID="1234")
         # self.wttQ.put(msg)
 
@@ -50,7 +50,7 @@ class WhatsappLayer(YowInterfaceLayer):
         # wait for the groups to be fetched before handling any incoming messages
         if not groups_ready:
             logger.debug("Waiting with message delivery, groups not ready")
-            self.preMsgQ.put(messageProtocolEntity)  # TODO try processing them later
+            self.offlineMsgQ.put(messageProtocolEntity)
             return
 
         # handle media messages
@@ -76,7 +76,7 @@ class WhatsappLayer(YowInterfaceLayer):
             return
         else:
             logger.error("Unknown message type %s " % messageProtocolEntity.getType())
-            return False
+            return
 
         # pack the message into our models
         if messageProtocolEntity.isGroupMessage():
@@ -119,6 +119,11 @@ class WhatsappLayer(YowInterfaceLayer):
         elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
             self.onGroupParticipantsReceived(entity)
 
+    def processOfflineMessages(self):
+        while not self.offlineMsgQ.empty():
+            self.onMediaMessage(self.offlineMsgQ.get())
+            self.offlineMsgQ.task_done()
+
     def onGroupListReceived(self, entity):
         global groups_ready, groups
         for group in entity.getGroups():
@@ -133,6 +138,7 @@ class WhatsappLayer(YowInterfaceLayer):
         self.mediaWorker = MediaWorker(self.wttQ, groups)
         self.mediaWorker.start()
 
+        self.processOfflineMessages()
         # self.getGroupInfo()  # TODO listen to updates instead?
         logger.debug("Groups updated")
 
