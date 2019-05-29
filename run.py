@@ -3,7 +3,7 @@ import logging
 from queue import Queue
 from threading import Thread
 
-import setup
+import utils
 import src.telegram_bot as tg
 import src.telegram_selfbot as tgs
 import src.whatsapp_selfbot as wa
@@ -16,15 +16,17 @@ tgsQ = Queue(maxsize=0)
 
 
 def loopInThread(loop):
-    loop.run_until_complete(tgs.run(tgsQ, setup.get_tg_config()))
+    loop.run_until_complete(tgs.run(tgsQ, utils.get_tg_config()))
 
 
 if __name__ == "__main__":
 
+    utils.ensureTelethonSession()
+
     loop = asyncio.get_event_loop()
     tgs_thread = Thread(target=loopInThread, args=(loop,))
-    tg_thread = Thread(target=tg.run, args=(wttQ, ttwQ, tgsQ, setup.get_tg_config(),))
-    wa_thread = Thread(target=wa.run, args=(wttQ, ttwQ, setup.get_wa_config(),))
+    tg_thread = Thread(target=tg.run, args=(wttQ, ttwQ, tgsQ, utils.get_tg_config(),))
+    wa_thread = Thread(target=wa.run, args=(wttQ, ttwQ, utils.get_wa_config(),))
 
     try:
         tgs_thread.start()

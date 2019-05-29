@@ -43,6 +43,7 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
     python3.6 run.py
  
     ```
+    **Important:** On first run you will have to enter your phone number again and then the verification code that you will receive on Telegram (This is necessary because Bot accounts on Telegram can't create groups).
 
 ## Configuration
 

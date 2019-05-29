@@ -4,7 +4,7 @@ import logging
 from telethon import TelegramClient
 from telethon.tl.functions.messages import CreateChatRequest
 
-import setup
+import utils
 
 logger = logging.getLogger(__name__)
 config = None
@@ -24,7 +24,7 @@ async def run(tgsQ, cfg):
     while True:
         if not tgsQ.empty():
             chatName, msg = tgsQ.get()
-            chatMap = setup.get_chatmap()
+            chatMap = utils.get_chatmap()
             tgID = None
 
             if not chatName in chatMap:
@@ -40,7 +40,7 @@ async def run(tgsQ, cfg):
                 tgID = '-' + str(chat.chats[0].id)
 
             chatMap[chatName] = {"waID": msg.waID, "tgID": tgID}
-            setup.save_chatmap(chatMap)
+            utils.save_chatmap(chatMap)
 
             tgsQ.task_done()
         await asyncio.sleep(0.25)

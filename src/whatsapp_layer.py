@@ -71,24 +71,12 @@ class WhatsappLayer(YowInterfaceLayer):
             self.onMediaMessage(messageProtocolEntity)
             return
         # handle all other kinds of messages
-        elif messageProtocolEntity.getType() == 'text':
+        elif isinstance(messageProtocolEntity, TextMessageProtocolEntity):
             mtype = messageProtocolEntity.getType()
             body = messageProtocolEntity.getBody()
             logging.info("Received message from " + messageProtocolEntity.getNotify() + ": " + body)
-        elif messageProtocolEntity.media_type == "location":
-            media = "location (%s, %s) to %s" % (
-                messageProtocolEntity.getLatitude(), messageProtocolEntity.getLongitude(),
-                messageProtocolEntity.getFrom(False))
-            print(media)  # TODO handle this
-            return
-        elif messageProtocolEntity.media_type == "contact":
-            media = "contact (%s, %s) to %s" % (
-                messageProtocolEntity.getName(), messageProtocolEntity.getCardData(),
-                messageProtocolEntity.getFrom(False))
-            print(media)  # TODO handle this
-            return
         else:
-            logger.error("Unknown message type %s " % messageProtocolEntity.getType())
+            logger.error("Unknown message type %s " % str(messageProtocolEntity))
             return
 
         # pack the message into our models
@@ -114,6 +102,18 @@ class WhatsappLayer(YowInterfaceLayer):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
             logger.info("Received media message")
             self.mediaWorker.enqueue(messageProtocolEntity)
+        elif messageProtocolEntity.media_type == "location":
+            media = "location (%s, %s) to %s" % (
+                messageProtocolEntity.getLatitude(), messageProtocolEntity.getLongitude(),
+                messageProtocolEntity.getFrom(False))
+            print(media)  # TODO handle this
+            return
+        elif messageProtocolEntity.media_type == "contact":
+            media = "contact (%s, %s) to %s" % (
+                messageProtocolEntity.getName(), messageProtocolEntity.getCardData(),
+                messageProtocolEntity.getFrom(False))
+            print(media)  # TODO handle this
+            return
         else:
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
 

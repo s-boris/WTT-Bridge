@@ -6,7 +6,7 @@ import telegram
 from PIL import Image
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-import setup
+import utils
 from src.models import *
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def onMessage(update, context):
         return
 
     if update.message.text:
-        chatMap = setup.get_chatmap()
+        chatMap = utils.get_chatmap()
         for key in chatMap:
             if int(chatMap[key]["tgID"]) == tgID:
                 # doesn't really matter if private or group message
@@ -70,7 +70,7 @@ def sendWttMessage(context, toChannelName, msg):
     sent = False
 
     while not sent:
-        chatMap = setup.get_chatmap()
+        chatMap = utils.get_chatmap()
         if toChannelName in chatMap:
             if msg.type == "text":
                 context.bot.send_message(chat_id=chatMap[toChannelName]['tgID'],
