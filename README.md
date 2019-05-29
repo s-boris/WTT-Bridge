@@ -1,4 +1,4 @@
-# WTT-Bridge (WIP)
+# WTT-Bridge
 
 Synchronize your conversations between Whatsapp and Telegram. 
 
@@ -30,14 +30,14 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
  
     ```
 
-3. Install the libraries:
+3. Install the dependencies (You should also run this after every update of WTT):
     
     ```bash
     sudo pip3.6 install -r requirements.txt
  
     ```
     
-4. Check the next section on how to setup your config file. When you're done you can start the bot with:
+4. Check the next section on how to setup your config file. When you're done you can start WTT with:
  
      ```bash
     python3.6 run.py
@@ -46,21 +46,21 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
 
 ## Configuration
 
-You have to rename the config_template.json to config.json and fill in all the values to run the bot. Here is as some info how you can find each value:
+You have to rename the config_template.json to config.json and fill in all the values to run the necessary bots. Here is as some info on how obtain each value:
 
 #### Telegram: 
 
-- "bot_token": Talk to https://telegram.me/botfather and create a bot to get a token
+- "bot_token": Talk to [@BotFather](https://telegram.me/botfather) and create a bot to get a token
 
 - "bot_username": The username you gave your bot (with the @ in front)
 
 - "api_id" and "api_hash": Visit https://my.telegram.org/
 
-Note: Disable privacy mode on your bot using @botfather or you won't be able to reply to Whatsapp messages in Telegram.
+Note: Disable privacy mode on your bot using [@BotFather](https://telegram.me/botfather) or you won't be able to reply to Whatsapp messages.
 
 #### Whatsapp:
 
-- "phone": your phone number with country code but without + or 0 at the beginning
+- "phone": your phone number with country code but without + or 0 at the beginning, e.g. 4923456789
 
 - "client_static_keypar": to get your keypair do the following: 
 
