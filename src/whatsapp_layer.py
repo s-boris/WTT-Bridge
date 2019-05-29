@@ -12,7 +12,6 @@ from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProt
 from src.media_worker import MediaWorker
 from src.models import *
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 groups = []
@@ -144,9 +143,12 @@ class WhatsappLayer(YowInterfaceLayer):
         self.mediaWorker = MediaWorker(self.wttQ, groups)
         self.mediaWorker.start()
 
+        logger.info("Processing offline messages...")
         self.processOfflineMessages()
+        logger.info("Offline messages processed")
+
         # self.getGroupInfo()  # TODO listen to updates instead?
-        logger.debug("Groups updated")
+        logger.info("Groups updated")
 
     def onGroupParticipantsReceived(self, entity):
         logger.debug('Received %d participants in group with id %s', len(entity.getParticipants()), entity.getFrom())

@@ -14,8 +14,12 @@ async def run(tgsQ, cfg):
     global config
     config = cfg
 
-    logger.info("Starting Telegram Self-Bot")
-    client = await TelegramClient('anon', int(config["api_id"]), config["api_hash"]).start()
+    logger.info("Starting Telethon Self-Bot")
+    try:
+        client = await TelegramClient('anon', int(config["api_id"]), config["api_hash"]).start()
+    except Exception as e:
+        logger.error("Telethon was unable to start:\n" + str(e))
+        return
 
     while True:
         if not tgsQ.empty():
@@ -24,11 +28,15 @@ async def run(tgsQ, cfg):
             tgID = None
 
             if not chatName in chatMap:
-                chat = await client(CreateChatRequest(
-                    users=[config["bot_username"]],
-                    title=chatName
-                ))
-                logger.debug('Created new group chat "{}"'.format(chatName))
+                try:
+                    chat = await client(CreateChatRequest(
+                        users=[config["bot_username"]],
+                        title=chatName
+                    ))
+                except Exception as e:
+                    logger.error("Telethon was unable to create a group with name {}:\n{}".format(chatName, str(e)))
+                    continue
+                logger.info('Created new chat "{}"'.format(chatName))
                 tgID = '-' + str(chat.chats[0].id)
 
             chatMap[chatName] = {"waID": msg.waID, "tgID": tgID}

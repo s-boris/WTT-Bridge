@@ -37,7 +37,7 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
  
     ```
     
-4. Check the next section on how to setup your config file. When you're done you can start WTT with:
+4. Check the next section on how to setup your `config.json` file. When you're done you can start WTT with:
  
      ```bash
     python3.6 run.py
@@ -46,7 +46,7 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
 
 ## Configuration
 
-You have to rename the config_template.json to config.json and fill in all the values to run the necessary bots. Here is as some info on how obtain each value:
+You have to rename the `config_template.json` to `config.json` and fill in all the values to run the necessary bots. Here is some info on how obtain each value:
 
 #### Telegram: 
 
