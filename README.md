@@ -1,8 +1,9 @@
 # WTT-Bridge (WIP)
 
-Syncronize your conversations and media between Whatsapp and Telegram. 
-To make it as seamless as possible, the WTT-Bridge will simulate conversations on Telegram by creating a separate group chat for each Whatsapp conversation and forward all messages accordingly.
+Synchronize your conversations between Whatsapp and Telegram. 
 
+To make it as seamless as possible, WTT-Bridge will simulate conversations on Telegram by creating a separate group chat for each Whatsapp conversation and forward all messages accordingly.
+Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
 >TODO screenshot
 
 ## Installation
