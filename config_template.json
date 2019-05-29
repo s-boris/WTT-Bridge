@@ -1,12 +1,12 @@
 {
   "Telegram": {
-    "bot_token": "your token",
-    "bot_username": "@yourbotusername",
-    "api_id": "your app id",
-    "api_hash": "your api hash"
+    "bot_token": "TELEGRAM_BOT_TOKEN",
+    "bot_username": "@TELEGRAM_BOT_NAME",
+    "api_id": "TELEGRAM_APP_ID",
+    "api_hash": "TELEGRAM_APP_HASH"
   },
   "Whatsapp": {
     "phone": "49XXXXXXXX",
-    "client_static_keypair": "your keypair"
+    "client_static_keypair": "WHATSAPP_KEYPAIR"
   }
 }
