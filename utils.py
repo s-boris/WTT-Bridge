@@ -10,10 +10,13 @@ with open(dir_path + '/config.json', 'r') as f:
     config = json.load(f)
 
 
-def ensureTelethonSession():
-    # The first parameter is the .session file name (absolute paths allowed)
-    with TelegramClient('anon', int(get_tg_config()["api_id"]), get_tg_config()["api_hash"]) as client:
-        return True
+def ensureTelethonSession(readFromEnv = None):
+	if(readFromEnv):
+		with TelegramClient('anon', int(os.environ['app_id']), os.environ['app_hash']) as client:
+		    return True
+	else:
+		with TelegramClient('anon', int(get_tg_config()["api_id"]), get_tg_config()["api_hash"]) as client:
+		    return True
 
 
 def get_chatmap():
