@@ -71,11 +71,13 @@ class MediaWorker(threading.Thread):
     def _write(self, media_message_protocolentity, data, filename):
         # pack the message into our models
         if media_message_protocolentity.isGroupMessage():
-            msg = GroupMessage(media_message_protocolentity.media_type, media_message_protocolentity.getNotify(), data,
+            msg = GroupMessage(media_message_protocolentity.media_type,
+                               media_message_protocolentity.getNotify().encode('latin-1').decode(), data,
                                self.groupIdToSubject(media_message_protocolentity.getFrom()),
                                waID=media_message_protocolentity.getFrom(), filename=filename)
         else:
-            msg = PrivateMessage(media_message_protocolentity.media_type, media_message_protocolentity.getNotify(),
+            msg = PrivateMessage(media_message_protocolentity.media_type,
+                                 media_message_protocolentity.getNotify().encode('latin-1').decode(),
                                  data, waID=media_message_protocolentity.getFrom(), filename=filename)
 
         self.wttQ.put(msg)
