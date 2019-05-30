@@ -102,11 +102,11 @@ echo ''
 echo 'Enter the code from whatsapp that you just received: (Looks like 123-456, but please pass this as 123456)'
 read whatsapp_code
 echo ''
-yowsup-cli registration --register $whatsapp_code --config-phone $number
-echo ''
-echo 'Please copy and paste here the client_static_keypair variable shown above:'
-read static_keypair
-echo ''
+
+echo 'Parsing yowsup-cli registration client_static_keypair...'
+static_keypair=$(yowsup-cli registration --register $whatsapp_code --config-phone $number | grep -Po '"client_static_keypair": *\K"[^"]*"')
+static_keypair="${static_keypair%\"}"
+static_keypair="${static_keypair#\"}"
 
 echo 'Finalizing your config.json...'
 cp config_template.json config.json
