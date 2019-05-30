@@ -21,9 +21,11 @@ def loopInThread(loop):
 
 if __name__ == "__main__":
 
-    utils.ensureTelethonSession()
+    utils.loadConfig()
 
     loop = asyncio.get_event_loop()
+    loop.run_until_complete(utils.ensureTelethonSession())
+
     tgs_thread = Thread(target=loopInThread, args=(loop,))
     tg_thread = Thread(target=tg.run, args=(wttQ, ttwQ, tgsQ, utils.get_tg_config(),))
     wa_thread = Thread(target=wa.run, args=(wttQ, ttwQ, utils.get_wa_config(),))
