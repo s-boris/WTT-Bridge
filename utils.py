@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 dir_path = os.path.dirname(os.path.realpath(__file__))
 chatmap_path = dir_path + '/chatmap.json'
 
+config = None
+
 
 def loadConfig():
     global config
@@ -21,11 +23,12 @@ def loadConfig():
 
 
 async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
-    tgCfg = get_tg_config()
-    waCfg = get_wa_config()
-    cfgAppId = int(tgCfg["api_id"])
-    cfgAppHash = tgCfg["api_hash"]
-    cfgPhone = "+" + waCfg["phone"]
+    if config:
+        tgCfg = get_tg_config()
+        waCfg = get_wa_config()
+        cfgAppId = int(tgCfg["api_id"])
+        cfgAppHash = tgCfg["api_hash"]
+        cfgPhone = "+" + waCfg["phone"]
 
     try:
         client = await TelegramClient('anon', app_id or cfgAppId, api_hash or cfgAppHash).start(phone or cfgPhone)
