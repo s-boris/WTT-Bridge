@@ -1,7 +1,11 @@
 import logging
+import os
+import sys
+import time
 from queue import Queue
 from threading import Thread
 
+from PIL import Image
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
@@ -66,26 +70,26 @@ class WhatsappLayer(YowInterfaceLayer):
             self.offlineMsgQ.put(messageProtocolEntity)
             return
 
-        # handle media messages
         if isinstance(messageProtocolEntity, MediaMessageProtocolEntity):
             self.onMediaMessage(messageProtocolEntity)
             return
-        # handle all other kinds of messages
         elif isinstance(messageProtocolEntity, TextMessageProtocolEntity):
             mtype = messageProtocolEntity.getType()
             body = messageProtocolEntity.getBody()
-            logging.info("Received message from " + messageProtocolEntity.getNotify() + ": " + body)
+            logging.info(
+                "Received message from " + messageProtocolEntity.getNotify().encode('latin-1').decode() + ": " + body)
         else:
             logger.error("Unknown message type %s " % str(messageProtocolEntity))
             return
 
         # pack the message into our models
         if messageProtocolEntity.isGroupMessage():
-            msg = GroupMessage(mtype, messageProtocolEntity.getNotify(), body,
+            msg = GroupMessage(mtype, messageProtocolEntity.getNotify().encode('latin-1').decode(), body,
                                self.groupIdToSubject(messageProtocolEntity.getFrom()),
                                waID=messageProtocolEntity.getFrom())
         else:
-            msg = PrivateMessage(mtype, messageProtocolEntity.getNotify(), body, waID=messageProtocolEntity.getFrom())
+            msg = PrivateMessage(mtype, messageProtocolEntity.getNotify().encode('latin-1').decode(), body,
+                                 waID=messageProtocolEntity.getFrom())
 
         self.wttQ.put(msg)
 
