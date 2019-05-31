@@ -1,11 +1,6 @@
-import logging
-import os
-import sys
-import time
 from queue import Queue
 from threading import Thread
 
-from PIL import Image
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
@@ -15,11 +10,14 @@ from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProt
 
 from src.media_worker import MediaWorker
 from src.models import *
+from utils import *
 
 logger = logging.getLogger(__name__)
 
 groups = []
 groups_ready = False
+
+TEMPLOCATION = "temp"
 
 
 class WhatsappLayer(YowInterfaceLayer):
@@ -31,8 +29,18 @@ class WhatsappLayer(YowInterfaceLayer):
         self.mediaWorker = None
         self.offlineMsgQ = Queue()
 
-        # msg = PrivateMessage('text', "Testboy7", "Testmessage", waID="1234")
-        # self.wttQ.put(msg)
+        if not os.path.exists(TEMPLOCATION):
+            os.makedirs(TEMPLOCATION)
+
+    def telegramMessageListener(self):
+        while True:
+            if not self.ttwQ.empty():
+                msg = self.ttwQ.get()
+                if msg.type == "text":
+                    outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
+                    self.toLower(outgoingMessageProtocolEntity)
+
+                self.ttwQ.task_done()
 
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
@@ -49,20 +57,10 @@ class WhatsappLayer(YowInterfaceLayer):
         tgListener = Thread(target=self.telegramMessageListener)
         tgListener.start()
 
-    def telegramMessageListener(self):
-        while True:
-            if not self.ttwQ.empty():
-                msg = self.ttwQ.get()
-                outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
-                self.toLower(outgoingMessageProtocolEntity)
-                self.ttwQ.task_done()
-
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
-        # confirm message received
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
                                                 'read', messageProtocolEntity.getParticipant())
-        self.toLower(receipt)
 
         # wait for the groups to be fetched before handling any incoming messages
         if not groups_ready:
@@ -74,24 +72,15 @@ class WhatsappLayer(YowInterfaceLayer):
             self.onMediaMessage(messageProtocolEntity)
             return
         elif isinstance(messageProtocolEntity, TextMessageProtocolEntity):
-            mtype = messageProtocolEntity.getType()
-            body = messageProtocolEntity.getBody()
-            logging.info(
-                "Received message from " + messageProtocolEntity.getNotify().encode('latin-1').decode() + ": " + body)
+            self.sendToTelegram(messageProtocolEntity, messageProtocolEntity.getBody(), isMedia=False)
+            logging.info("Received message from " + messageProtocolEntity.getNotify().encode(
+                'latin-1').decode() + ": " + messageProtocolEntity.getBody())
         else:
             logger.error("Unknown message type %s " % str(messageProtocolEntity))
             return
 
-        # pack the message into our models
-        if messageProtocolEntity.isGroupMessage():
-            msg = GroupMessage(mtype, messageProtocolEntity.getNotify().encode('latin-1').decode(), body,
-                               self.groupIdToSubject(messageProtocolEntity.getFrom()),
-                               waID=messageProtocolEntity.getFrom())
-        else:
-            msg = PrivateMessage(mtype, messageProtocolEntity.getNotify().encode('latin-1').decode(), body,
-                                 waID=messageProtocolEntity.getFrom())
-
-        self.wttQ.put(msg)
+        # confirm message received
+        self.toLower(receipt)
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):
@@ -102,31 +91,38 @@ class WhatsappLayer(YowInterfaceLayer):
     def onFailure(self, entity):
         logger.error("Login Failed, reason: %s" % entity.getReason())
 
-    def onMediaMessage(self, messageProtocolEntity):
-        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
-            logger.info("Received media message")
-            self.mediaWorker.enqueue(messageProtocolEntity)
-        elif messageProtocolEntity.media_type == "location":
-            media = "location (%s, %s) to %s" % (
-                messageProtocolEntity.getLatitude(), messageProtocolEntity.getLongitude(),
-                messageProtocolEntity.getFrom(False))
-            print(media)  # TODO handle this
-            return
-        elif messageProtocolEntity.media_type == "contact":
-            media = "contact (%s, %s) to %s" % (
-                messageProtocolEntity.getName(), messageProtocolEntity.getCardData(),
-                messageProtocolEntity.getFrom(False))
-            print(media)  # TODO handle this
-            return
-        else:
-            logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
-
     @ProtocolEntityCallback("iq")
     def onIq(self, entity):
         if isinstance(entity, ListGroupsResultIqProtocolEntity):
             self.onGroupListReceived(entity)
         elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
             self.onGroupParticipantsReceived(entity)
+
+    def sendToTelegram(self, messageProtocolEntity, body, isMedia=False, filename=None):
+        msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),
+                         messageProtocolEntity.getNotify().encode('latin-1').decode(),
+                         body,
+                         title=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
+                         isGroup=messageProtocolEntity.isGroupMessage(),
+                         waID=messageProtocolEntity.getFrom(),
+                         filename=filename)
+        self.wttQ.put(msg)
+
+    def onMediaMessage(self, messageProtocolEntity):
+        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
+            logger.info("Received media message")
+            self.mediaWorker.enqueue(messageProtocolEntity)
+        elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_URL:
+            self.sendToTelegram(messageProtocolEntity, messageProtocolEntity.canonical_url, isMedia=True)
+            return
+        elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_LOCATION:
+            logger.warning("Received Location message - not supported yet")
+            return
+        elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_CONTACT:
+            logger.warning("Received vCard message - not supported yet")
+            return
+        else:
+            logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
 
     def processOfflineMessages(self):
         while not self.offlineMsgQ.empty():

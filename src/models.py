@@ -1,21 +1,12 @@
-class PrivateMessage:
-    def __init__(self, type, author, body, filename=None, waID=None, tgID=None):
+class WTTMessage:
+    def __init__(self, type, author, body, waID=None, tgID=None, title=None, isGroup=None, filename=None):
         self.type = type
         self.author = author
         self.body = body
         self.waID = waID
         self.tgID = tgID
-        self.filename = filename
-
-
-class GroupMessage:
-    def __init__(self, type, author, body, title, filename=None, waID=None, tgID=None):
-        self.type = type
-        self.author = author
-        self.body = body
         self.title = title
-        self.waID = waID
-        self.tgID = tgID
+        self.isGroup = isGroup
         self.filename = filename
 
 

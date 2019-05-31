@@ -1,12 +1,8 @@
 import json
 import logging
 import os
-import socket
 
 from telethon.sync import TelegramClient
-from yowsup.common.http import WARequest, JSONResponseParser
-from yowsup.config.manager import ConfigManager
-from yowsup.layers.protocol_media.mediauploader import MediaUploader
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +33,7 @@ async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
         return False
     await client.disconnect()
     return True
+
 
 def get_chatmap():
     data = {}

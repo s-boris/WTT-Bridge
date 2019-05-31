@@ -13,7 +13,7 @@ from yowsup.layers.protocol_media.protocolentities \
     VideoDownloadableMediaMessageProtocolEntity, DocumentDownloadableMediaMessageProtocolEntity, \
     ContactMediaMessageProtocolEntity, DownloadableMediaMessageProtocolEntity
 
-from src.models import GroupMessage, PrivateMessage
+from src.models import *
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +69,14 @@ class MediaWorker(threading.Thread):
         return None
 
     def _write(self, media_message_protocolentity, data, filename):
-        # pack the message into our models
-        if media_message_protocolentity.isGroupMessage():
-            msg = GroupMessage(media_message_protocolentity.media_type,
-                               media_message_protocolentity.getNotify().encode('latin-1').decode(), data,
-                               self.groupIdToSubject(media_message_protocolentity.getFrom()),
-                               waID=media_message_protocolentity.getFrom(), filename=filename)
-        else:
-            msg = PrivateMessage(media_message_protocolentity.media_type,
-                                 media_message_protocolentity.getNotify().encode('latin-1').decode(),
-                                 data, waID=media_message_protocolentity.getFrom(), filename=filename)
-
+        msg = WTTMessage(media_message_protocolentity.media_type,
+                         media_message_protocolentity.getNotify().encode('latin-1').decode(),
+                         data,
+                         waID=media_message_protocolentity.getFrom(),
+                         title=(self.groupIdToSubject(
+                             media_message_protocolentity.getFrom()) if media_message_protocolentity.isGroupMessage() else None),
+                         isGroup=media_message_protocolentity.isGroupMessage(),
+                         filename=filename)
         self.wttQ.put(msg)
 
         return None

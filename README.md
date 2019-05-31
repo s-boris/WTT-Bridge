@@ -29,7 +29,8 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
    ```
 
 3. Run `./setup.sh` to start the setup assistant.
-   Note: After the setup disable privacy mode on your bot using [@BotFather](https://telegram.me/botfather) or you won't be able to reply to Whatsapp messages.
+
+   **Note:** After the setup disable privacy mode on your bot using [@BotFather](https://telegram.me/botfather) or you won't be able to reply to Whatsapp messages.
 
 ## Notes
 
