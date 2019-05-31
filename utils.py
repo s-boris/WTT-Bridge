@@ -38,7 +38,6 @@ async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
     await client.disconnect()
     return True
 
-
 def get_chatmap():
     data = {}
     if os.path.isfile(chatmap_path):

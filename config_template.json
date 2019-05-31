@@ -6,7 +6,7 @@
     "api_hash": "TELEGRAM_APP_HASH"
   },
   "Whatsapp": {
-    "phone": "49XXXXXXXX",
+    "phone": "WHATSAPP_NUMBER",
     "client_static_keypair": "WHATSAPP_KEYPAIR"
   }
 }
