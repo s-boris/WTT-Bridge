@@ -40,53 +40,53 @@ echo 'Done!'
 echo ''
 
 # 1.1) Telegram.bot_Token
-echo 'Talk to the official Telegram @BotFather to create a new bot ( https://telegram.me/botfather )'
-echo 'You can create a new bot by entering the command /newbot'
+echo -e 'Talk to the official Telegram \e[96m@BotFather\e[39m (\e[96m https://telegram.me/botfather \e[39m) to create a new bot.'
+echo -e 'You can create a new bot by entering the command \e[33m/newbot\e[39m in the Telegram chat.'
 echo 'Afterwards, you will be asked to give your bot a name. It has to be unique, we suggest something like WTT_yourname_Bot'
-echo 'Paste the API key that you will be given here: (Shown as "Use this token to access the HTTP API")'
+echo -e 'Paste the \e[4mAPI key\e[0m that you will be given here: (Shown as "Use this token to access the HTTP API")'
 read bot_token
 echo ''
 
 # 1.2) Telegram.bot_username
-echo 'Your bot-username, without the @ symbol:'
+echo -e 'Your bots \e[4musername\e[0m, without the @ symbol:'
 read bot_name
 echo ''
 
 # 1.3) Telegram.api_id
 echo 'You also need a so-called SelfBot, because this is the type of bot that can represent "you" and create new groups.'
-echo 'Visit https://my.telegram.org/  and login.'
+echo -e 'Visit \e[96mhttps://my.telegram.org/\e[39m and login with your Telegram account.'
 echo 'Under "API development tools" you can create a new app. Give any name/shortname.'
-echo 'Enter your app api_id:'
+echo -e 'Enter your app \e[4mapi_id\e[0m:'
 read app_id
 export app_id
 echo ''
 
 # 1.4) Telegram.api_hash
-echo 'Enter the app api_hash:'
+echo -e 'Enter the app \e[4mapi_hash\e[0m:'
 read app_hash
 export app_hash
 
 echo ''
-echo 'Congratulations! The telegram part is done. After a quick whatsapp connectivity setup, you will be ready to rock!'
-echo 'Find your "Mobile Country Code (MCC)" and "Mobile Network Code (MNC)" here:'
-echo 'https://en.wikipedia.org/wiki/Mobile_country_code#National_operators'
-echo 'Find your country, remember the MCC and click on the link in the column Mobile Network Codes to find your MNC.'
+echo 'Congratulations! We are almost done. After a quick whatsapp and telegram connectivity setup, you will be ready to rock!'
+echo -e 'Find your "Mobile Country Code (\e[4mMCC\e[0m)" and "Mobile Network Code (\e[4mMNC\e[0m)" here:'
+echo -e '\e[96mhttps://en.wikipedia.org/wiki/Mobile_country_code#National_operators\e[39m'
+echo -e 'Find your country, remember the \e[4mMCC\e[0m and click on the link in the column Mobile Network Codes to find your \e[4mMNC\e[0m.'
 echo ''
 # 2.1) mcc
-echo 'Enter your Mobile Country Code (MCC), 228 for Switzerland:'
+echo -e 'First enter your Mobile Country Code (\e[4mMCC\e[0m) (e.g. 228 for Switzerland):'
 read mcc
 echo ''
 
 # 2.2) mnc
-echo 'Enter your Mobile Network Code (MNC), 02 for Sunrise in Switzerland:'
+echo -e 'Enter your Mobile Network Code (\e[4mMNC\e[0m) (e.g. 02 for Sunrise in Switzerland):'
 read mnc
 echo ''
 
 # 2.3) cc
-echo 'Enter your country-code (e.g. 41 for Switzerland)'
+echo -e 'Enter your \e[4mcountry-code\e[0m (e.g. 41 for Switzerland)'
 read cc
 echo ''
-echo 'Enter your phone number without + or 0 at the beginning. Example: 411234567'
+echo -e 'Enter your \e[4mphone number\e[0m without + or 0 at the beginning. Example: 411234567'
 echo 'This is used to request a registration with the whatsapp AND telegram servers:'
 read number
 
@@ -94,19 +94,19 @@ ensureTelethonSessionCmd="utils.ensureTelethonSession(phone=\"+$number\", app_id
 eval "$python_installation -c 'import utils;import asyncio; asyncio.get_event_loop().run_until_complete($ensureTelethonSessionCmd)'"
 
 
-
 echo ''
 echo 'Running yowsup registration...'
 yowsup-cli registration --requestcode sms --config-phone $number --config-cc $cc --config-mcc $mcc --config-mnc $mnc
 echo ''
-echo 'Enter the code from whatsapp that you just received: (Looks like 123-456, but please pass this as 123456)'
+echo -e 'Enter the code from whatsapp that you just received: (Looks like \e[36m123-456\e[39m, but please pass this as \e[36m123456\e[39m)'
 read whatsapp_code
 echo ''
 
-echo 'Parsing yowsup-cli registration client_static_keypair...'
-static_keypair=$(yowsup-cli registration --register $whatsapp_code --config-phone $number | grep -Po '"client_static_keypair": *\K"[^"]*"')
-static_keypair="${static_keypair%\"}"
-static_keypair="${static_keypair#\"}"
+echo 'Running yowsup-cli registration...'
+result=$(yowsup-cli registration --register $whatsapp_code --config-phone $number)
+echo $result
+static_keypair=$(echo $result | grep -Po '\"client_static_keypair\": \"\K[^"]*')
+echo ''
 
 echo 'Finalizing your config.json...'
 cp config_template.json config.json
@@ -115,7 +115,7 @@ sed -i -e "s/TELEGRAM_BOT_NAME/$bot_name/g" config.json
 sed -i -e "s/TELEGRAM_APP_ID/$app_id/g" config.json
 sed -i -e "s/TELEGRAM_APP_HASH/$app_hash/g" config.json
 sed -i -e "s/WHATSAPP_NUMBER/$number/g" config.json
-sed -i -e "s/WHATSAPP_KEYPAIR/$static_keypair/g" config.json
+sed -i -e "s|WHATSAPP_KEYPAIR|$static_keypair|g" config.json
 
-echo 'DONE! You can start WTT-Bridge by running:'
+echo -e '\e[92mSetup Successful! You can start WTT-Bridge by running:'
 echo "$python_installation run.py"
