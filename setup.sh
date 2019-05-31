@@ -118,4 +118,4 @@ sed -i -e "s/WHATSAPP_NUMBER/$number/g" config.json
 sed -i -e "s|WHATSAPP_KEYPAIR|$static_keypair|g" config.json
 
 echo -e '\e[92mSetup Successful! You can start WTT-Bridge by running:'
-echo "$python_installation run.py"
+echo "./start.sh"
