@@ -18,40 +18,29 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
    ```
 
 2. Make sure you have at least Python 3.6 with python-dev, pip and venv installed.
-   
-    Example for Ubuntu 16.04:
+   Example for Ubuntu 16.04:
    
    ```bash
     sudo add-apt-repository ppa:jonathonf/python-3.6
     sudo apt-get update
-    sudo apt-get install python3.6
-    sudo apt-get install python3.6-dev
-    sudo apt-get install python3-venv
+    sudo apt-get install python3.6 python3.6-dev python3.6-venv
     wget https://bootstrap.pypa.io/get-pip.py
     sudo python3.6 get-pip.py
    ```
 
-3. Run ./setup.sh   to start the configuration setup assistant.
-   Note: Disable privacy mode on your bot using [@BotFather](https://telegram.me/botfather) or you won't be able to reply to Whatsapp messages.
+3. Run `./setup.sh` to start the setup assistant.
+   Note: After the setup disable privacy mode on your bot using [@BotFather](https://telegram.me/botfather) or you won't be able to reply to Whatsapp messages.
 
 ## Notes
 
  Working:
-
 - Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document)
-
 - Messages from Telegram to Whatsapp (text) 
   
-  TODO:
-
+TODO:
 - show participants
-
 - initiate chats from telegram
-
 - location (live sharing?)
-
 - contacts
-
 - Sync receipts
-
 - Sync group info and pictures
