@@ -1,9 +1,10 @@
+import sys
+import time
 from queue import Queue
 from threading import Thread
 
-from yowsup.layers import EventCallback
+from PIL import Image
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
-from yowsup.layers.network import YowNetworkLayer
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_media.protocolentities import *
@@ -42,6 +43,12 @@ class WhatsappLayer(YowInterfaceLayer):
                 if msg.type == "text":
                     outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
                     self.toLower(outgoingMessageProtocolEntity)
+                elif msg.type == "image":
+                    filepath = TEMPLOCATION + "/" + str(time.time()) + msg.filename
+                    img = Image.open(msg.body)
+                    img.save(filepath, 'JPEG')
+                    self.media_send(msg.waID, filepath, RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE)
+                    # os.remove(temporarylocation)  # TODO Delete file when done
 
                 self.ttwQ.task_done()
 
@@ -92,6 +99,55 @@ class WhatsappLayer(YowInterfaceLayer):
             self.onGroupListReceived(entity)
         elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
             self.onGroupParticipantsReceived(entity)
+
+    def media_send(self, waID, path, mediaType, caption=None):
+        entity = RequestUploadIqProtocolEntity(mediaType, filePath=path)
+        successFn = lambda successEntity, originalEntity: self.onRequestUploadResult(waID, mediaType, path,
+                                                                                     successEntity, originalEntity,
+                                                                                     caption)
+        errorFn = lambda errorEntity, originalEntity: self.onRequestUploadError(waID, path, errorEntity,
+                                                                                originalEntity)
+        self._sendIq(entity, successFn, errorFn)
+
+    def onRequestUploadResult(self, jid, mediaType, filePath, resultRequestUploadIqProtocolEntity,
+                              requestUploadIqProtocolEntity, caption=None):
+
+        if resultRequestUploadIqProtocolEntity.isDuplicate():
+            self.doSendMedia(mediaType, filePath, resultRequestUploadIqProtocolEntity.getUrl(), jid,
+                             resultRequestUploadIqProtocolEntity.getIp(), caption)
+        else:
+            successFn = lambda filePath, jid, url: self.doSendMedia(mediaType, filePath, url, jid,
+                                                                    resultRequestUploadIqProtocolEntity.getIp(),
+                                                                    caption)
+            mediaUploader = WTTMediaUploader(jid, self.getOwnJid(), filePath,
+                                             resultRequestUploadIqProtocolEntity.getUrl(),
+                                             get_wa_config()["phone"],
+                                             resumeOffset=resultRequestUploadIqProtocolEntity.getResumeOffset(),
+                                             successClbk=successFn,
+                                             errorClbk=self.onUploadError,
+                                             progressCallback=self.onUploadProgress,
+                                             asynchronous=False,
+                                             )
+            mediaUploader.start()
+
+    def onRequestUploadError(self, jid, path, errorRequestUploadIqProtocolEntity, requestUploadIqProtocolEntity):
+        logger.error("Request upload for file %s for %s failed" % (path, jid))
+
+    def doSendMedia(self, mediaType, filePath, url, to, ip=None, caption=None):
+        if mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE:
+            entity = ImageDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to, caption=caption)
+        elif mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_AUDIO:
+            entity = AudioDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to)
+        elif mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_VIDEO:
+            entity = VideoDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to, caption=caption)
+        self.toLower(entity)
+
+    def onUploadError(self, filePath, jid, url):
+        logger.error("Upload file %s to %s for %s failed!" % (filePath, url, jid))
+
+    def onUploadProgress(self, filePath, jid, url, progress):
+        sys.stdout.write("%s => %s, %d%% \r" % (os.path.basename(filePath), jid, progress))
+        sys.stdout.flush()
 
     def sendToTelegram(self, messageProtocolEntity, body, isMedia=False, filename=None):
         msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),

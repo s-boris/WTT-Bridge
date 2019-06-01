@@ -55,22 +55,22 @@ def onTextMessage(update, context):
 
 def onPhotoMessage(update, context):
     pass
-    # tgID = update.effective_chat.id
-    #
-    # if update.message.from_user.is_bot:
-    #     return
-    #
-    # chatMap = utils.get_chatmap()
-    # for key in chatMap:
-    #     if int(chatMap[key]["tgID"]) == tgID:
-    #         fileID = update.message.photo[-1].file_id
-    #         bio = BytesIO()
-    #         file = context.bot.get_file(fileID)
-    #         file.download(out=bio)
-    #         filename = file.file_path.split('/')[-1]
-    #         # doesn't really matter if private or group message
-    #         ttwQ.put(WTTMessage('image', update.message.from_user.first_name, bio, waID=chatMap[key]["waID"],
-    #                             filename=filename))
+    tgID = update.effective_chat.id
+
+    if update.message.from_user.is_bot:
+        return
+
+    chatMap = utils.get_chatmap()
+    for key in chatMap:
+        if int(chatMap[key]["tgID"]) == tgID:
+            fileID = update.message.photo[-1].file_id
+            bio = BytesIO()
+            file = context.bot.get_file(fileID)
+            file.download(out=bio)
+            filename = file.file_path.split('/')[-1]
+            # doesn't really matter if private or group message
+            ttwQ.put(WTTMessage('image', update.message.from_user.first_name, bio, waID=chatMap[key]["waID"],
+                                filename=filename))
 
 
 def whatsappMessageListener(context):

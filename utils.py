@@ -1,8 +1,12 @@
 import json
 import logging
 import os
+import socket
 
 from telethon.sync import TelegramClient
+from yowsup.common.http import WARequest, JSONResponseParser
+from yowsup.config.manager import ConfigManager
+from yowsup.layers.protocol_media.mediauploader import MediaUploader
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,6 @@ async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
     await client.disconnect()
     return True
 
-
 def get_chatmap():
     data = {}
     if os.path.isfile(chatmap_path):
@@ -57,3 +60,29 @@ def get_tg_config():
 
 def get_wa_config():
     return config['Whatsapp']
+
+
+class WTTMediaUploader(MediaUploader):
+    def __init__(self, jid, accountJid, sourcePath, uploadUrl, username, resumeOffset=0, successClbk=None,
+                 errorClbk=None,
+                 progressCallback=None, asynchronous=True):
+        config = ConfigManager().load(username)
+        WARequest.__init__(self, config)
+
+        self.asynchronous = asynchronous
+        self.jid = jid
+        self.accountJid = accountJid
+        self.sourcePath = sourcePath
+        self.uploadUrl = uploadUrl
+        self.resumeOffset = resumeOffset
+
+        self.successCallback = successClbk
+        self.errorCallback = errorClbk
+        self.progressCallback = progressCallback
+
+        self.pvars = ["name", "type", "size", "url", "error",
+                      "mimetype", "filehash", "width", "height"]
+
+        self.setParser(JSONResponseParser())
+
+        self.sock = socket.socket()
