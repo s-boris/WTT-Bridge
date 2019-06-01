@@ -94,6 +94,7 @@ def sendToTelegram(context, msg):
             if not isQueued:
                 todoChat = CreateChat(chatName, waID=msg.waID)
                 tgsQ.put(todoChat)
+                isQueued = True
             logger.info("Group {} not found, waiting for creation...".format(chatName))
             time.sleep(1)
         else:
