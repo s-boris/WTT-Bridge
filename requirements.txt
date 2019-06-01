@@ -1,6 +1,6 @@
 requests
 tqdm
-telethon
+telethon==1.8.0
 pillow
 python-telegram-bot==12.0.0b1
 yowsup==3.2.3

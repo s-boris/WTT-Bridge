@@ -47,7 +47,7 @@ def onTextMessage(update, context):
 
     chatMap = utils.get_chatmap()
     for key in chatMap:
-        if int(chatMap[key]["tgID"]) == tgID:
+        if int(key) == tgID:
             ttwQ.put(
                 WTTMessage('text', update.message.from_user.first_name, update.message.text, waID=chatMap[key]["waID"]))
             return
