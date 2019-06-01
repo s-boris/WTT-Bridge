@@ -1,7 +1,9 @@
 from queue import Queue
 from threading import Thread
 
+from yowsup.layers import EventCallback
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
+from yowsup.layers.network import YowNetworkLayer
 from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_media.protocolentities import *
@@ -27,6 +29,7 @@ class WhatsappLayer(YowInterfaceLayer):
         self.wttQ = wttQueue
         self.ttwQ = ttwQueue
         self.mediaWorker = None
+        self.telegramMessageWorker = None
         self.offlineMsgQ = Queue()
 
         if not os.path.exists(TEMPLOCATION):
@@ -49,13 +52,9 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.info('Fetching Whatsapp groups')
         self.toLower(ListGroupsIqProtocolEntity())
 
-        logger.info("Starting MediaWorker")
-        self.mediaWorker = MediaWorker(self.wttQ, groups)
-        self.mediaWorker.start()
-
-        logger.info("Listening for Telegram messages")
-        tgListener = Thread(target=self.telegramMessageListener)
-        tgListener.start()
+    @EventCallback(YowNetworkLayer.EVENT_STATE_DISCONNECTED)
+    def onStateDisconnected(self, layerEvent):
+        logger.info("Disconnected: %s" % layerEvent.getArg("reason"))
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
@@ -139,9 +138,19 @@ class WhatsappLayer(YowInterfaceLayer):
 
         groups_ready = True  # this is sufficient info to handle incoming messages
 
-        logger.info("Starting MediaWorker")
-        self.mediaWorker = MediaWorker(self.wttQ, groups)
-        self.mediaWorker.start()
+        if self.mediaWorker and self.mediaWorker.isAlive():
+            pass
+        else:
+            logger.info("Starting MediaWorker")
+            self.mediaWorker = MediaWorker(self.wttQ, groups)
+            self.mediaWorker.start()
+
+        if self.telegramMessageWorker and self.telegramMessageWorker.isAlive():
+            pass
+        else:
+            logger.info("Listening for Telegram messages")
+            self.telegramMessageWorker = Thread(target=self.telegramMessageListener)
+            self.telegramMessageWorker.start()
 
         logger.info("Processing offline messages...")
         self.processOfflineMessages()
