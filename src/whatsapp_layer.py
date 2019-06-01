@@ -52,10 +52,6 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.info('Fetching Whatsapp groups')
         self.toLower(ListGroupsIqProtocolEntity())
 
-    @EventCallback(YowNetworkLayer.EVENT_STATE_DISCONNECTED)
-    def onStateDisconnected(self, layerEvent):
-        logger.info("Disconnected: %s" % layerEvent.getArg("reason"))
-
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
@@ -172,3 +168,4 @@ class WhatsappLayer(YowInterfaceLayer):
         for group in groups:
             if group["groupId"] == rest:
                 return group["subject"]
+        return False
