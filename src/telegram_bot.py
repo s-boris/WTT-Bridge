@@ -98,9 +98,14 @@ def sendToTelegram(context, msg):
             time.sleep(1)
         else:
             if msg.type == "text":
-                context.bot.send_message(chat_id=msg.tgID,
-                                         text="*{}*:\n{}".format(msg.author, msg.body),
-                                         parse_mode=telegram.ParseMode.MARKDOWN)
+                if msg.isGroup:
+                    context.bot.send_message(chat_id=msg.tgID,
+                                             text="*{}*:\n{}".format(msg.author, msg.body),
+                                             parse_mode=telegram.ParseMode.MARKDOWN)
+                else:
+                    context.bot.send_message(chat_id=msg.tgID,
+                                             text="{}".format(msg.body),
+                                             parse_mode=telegram.ParseMode.MARKDOWN)
             elif msg.type == "image":
                 bio = BytesIO(msg.body)
                 img = Image.open(bio)
