@@ -59,7 +59,7 @@ class WhatsappLayer(YowInterfaceLayer):
 
         # wait for the groups to be fetched before handling any incoming messages
         if not groups_ready:
-            logger.debug("Waiting with message delivery, groups not ready")
+            logger.info("Waiting with message delivery, groups not ready")
             self.offlineMsgQ.put(messageProtocolEntity)
             return
 
