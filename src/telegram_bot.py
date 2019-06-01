@@ -83,6 +83,7 @@ def whatsappMessageListener(context):
 def sendToTelegram(context, msg):
     sent = False
     tries = 0
+    isQueued = False
 
     while not sent and tries < MAX_RETRIES:
         msg.tgID = getTelegramChatID(msg.waID)
@@ -90,10 +91,10 @@ def sendToTelegram(context, msg):
 
         if not msg.tgID:  # we need to create a telegram group first
             chatName = "[WA]" + (msg.title if msg.isGroup else msg.author)
-            todoChat = CreateChat(chatName, waID=msg.waID)
-            if todoChat not in tgsQ.queue:
+            if not isQueued:
+                todoChat = CreateChat(chatName, waID=msg.waID)
                 tgsQ.put(todoChat)
-            logger.info("Group not found, waiting for creation...")
+            logger.info("Group {} not found, waiting for creation...".format(chatName))
             time.sleep(1)
         else:
             if msg.type == "text":
