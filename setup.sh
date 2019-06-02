@@ -103,10 +103,7 @@ read whatsapp_code
 echo ''
 
 echo 'Running yowsup-cli registration...'
-result=$(yowsup-cli registration --register $whatsapp_code --config-phone $number)
-echo $result
-static_keypair=$(echo $result | grep -Po '\"client_static_keypair\": \"\K[^"]*')
-echo ''
+yowsup-cli registration --register $whatsapp_code --config-phone $number
 
 echo 'Finalizing your config.json...'
 cp config_template.json config.json
@@ -115,7 +112,6 @@ sed -i -e "s/TELEGRAM_BOT_NAME/$bot_name/g" config.json
 sed -i -e "s/TELEGRAM_APP_ID/$app_id/g" config.json
 sed -i -e "s/TELEGRAM_APP_HASH/$app_hash/g" config.json
 sed -i -e "s/WHATSAPP_NUMBER/$number/g" config.json
-sed -i -e "s|WHATSAPP_KEYPAIR|$static_keypair|g" config.json
 
 echo -e '\e[92mSetup Successful! You can start WTT-Bridge by running:'
 echo "./start.sh"
