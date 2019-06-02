@@ -18,9 +18,6 @@ from utils import *
 
 logger = logging.getLogger(__name__)
 
-groups = []
-groups_ready = False
-
 TEMPLOCATION = "temp"
 
 
@@ -31,6 +28,9 @@ class WhatsappLayer(YowInterfaceLayer):
         self._mediaWorker = None
         self._telegramMessageWorker = None
         self._offlineMsgQ = Queue()
+        self._contacts = []
+        self._groups = []
+        self._groupsReady = False
 
         if not os.path.exists(TEMPLOCATION):
             os.makedirs(TEMPLOCATION)
@@ -54,7 +54,6 @@ class WhatsappLayer(YowInterfaceLayer):
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
         logger.info('Connected with WhatsApp servers')
-
         logger.info('Fetching Whatsapp groups')
         self.toLower(ListGroupsIqProtocolEntity())
 
@@ -63,9 +62,9 @@ class WhatsappLayer(YowInterfaceLayer):
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
                                                 'read', messageProtocolEntity.getParticipant())
 
-        # wait for the groups to be fetched before handling any incoming messages
-        if not groups_ready:
-            logger.info("Waiting with message delivery, groups not ready")
+        if not self._groupsReady:
+            logger.info("Waiting with message ({}) delivery, groups not loaded yet...".format(
+                messageProtocolEntity.getNotify().encode('latin-1').decode()))
             self._offlineMsgQ.put(messageProtocolEntity)
             return
 
@@ -95,7 +94,11 @@ class WhatsappLayer(YowInterfaceLayer):
     @ProtocolEntityCallback("iq")
     def onIq(self, entity):
         if isinstance(entity, ListGroupsResultIqProtocolEntity):
+            logger.debug("Received ListGroupsResultIqProtocolEntity")
             self.onGroupListReceived(entity)
+
+    # WIP Media sending stuff
+    # ------------------------------------------------------------
 
     def media_send(self, waID, path, mediaType, caption=None):
         entity = RequestUploadIqProtocolEntity(mediaType, filePath=path)
@@ -146,6 +149,8 @@ class WhatsappLayer(YowInterfaceLayer):
         sys.stdout.write("%s => %s, %d%% \r" % (os.path.basename(filePath), jid, progress))
         sys.stdout.flush()
 
+    # --------------------------------------------------------------
+
     def sendToTelegram(self, messageProtocolEntity, body, isMedia=False, filename=None):
         msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),
                          messageProtocolEntity.getNotify().encode('latin-1').decode(),
@@ -158,13 +163,14 @@ class WhatsappLayer(YowInterfaceLayer):
 
     def onMediaMessage(self, messageProtocolEntity):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
-            logger.info("Received media message")
-            self.mediaWorker.enqueue(messageProtocolEntity)
+            logger.debug("Received media message")
+            self._mediaWorker.enqueue(messageProtocolEntity)
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_URL:
+            logger.debug("Received url message")
             self.sendToTelegram(messageProtocolEntity, messageProtocolEntity.canonical_url, isMedia=True)
             return
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_LOCATION:
-            logger.warning("Received Location message - not supported yet")
+            logger.warning("Received location message - not supported yet")
             return
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_CONTACT:
             logger.warning("Received vCard message - not supported yet")
@@ -178,25 +184,25 @@ class WhatsappLayer(YowInterfaceLayer):
             self._offlineMsgQ.task_done()
 
     def onGroupListReceived(self, entity):
-        global groups_ready, groups
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
-            groups.append({"groupId": group.getId(),
-                           "subject": group.getSubject().encode('latin-1').decode(),
-                           "participants": group.getParticipants()})
+            self._groups.append({"groupId": group.getId(),
+                                 "subject": group.getSubject().encode('latin-1').decode(),
+                                 "participants": group.getParticipants()})
+            testid = group.getId()
 
             # self.toLower(InfoGroupsIqProtocolEntity(group.getId()))
             # time.sleep(0.5)
 
         logger.info("Groups ready")
-        groups_ready = True  # this is sufficient info to handle incoming messages
+        self._groupsReady = True  # this is sufficient info to handle incoming messages
 
         if self._mediaWorker and self._mediaWorker.isAlive():
             pass
         else:
             logger.info("Starting MediaWorker")
-            self._mediaWorker = MediaWorker(self.getProp("wttQ"), groups)
+            self._mediaWorker = MediaWorker(self.getProp("wttQ"), self._groups)
             self._mediaWorker.start()
 
         if self._telegramMessageWorker and self._telegramMessageWorker.isAlive():
@@ -222,7 +228,7 @@ class WhatsappLayer(YowInterfaceLayer):
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]
-        for group in groups:
+        for group in self._groups:
             if group["groupId"] == rest:
                 return group["subject"]
         return False

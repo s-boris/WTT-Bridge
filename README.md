@@ -35,7 +35,7 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
 ## Notes
 
  Working:
-- Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document)
+- Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document, url)
 - Messages from Telegram to Whatsapp (text) 
   
 TODO:
