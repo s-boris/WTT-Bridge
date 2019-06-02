@@ -8,7 +8,7 @@ import src.telegram_bot as tg
 import src.telegram_selfbot as tgs
 import src.whatsapp_selfbot as wa
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 
 wttQ = Queue(maxsize=0)
 ttwQ = Queue(maxsize=0)

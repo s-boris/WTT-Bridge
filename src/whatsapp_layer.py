@@ -5,11 +5,12 @@ from threading import Thread
 
 from PIL import Image
 from yowsup.layers.interface import YowInterfaceLayer, ProtocolEntityCallback
-from yowsup.layers.protocol_acks.protocolentities import OutgoingAckProtocolEntity
+from yowsup.layers.protocol_acks.protocolentities import *
 from yowsup.layers.protocol_groups.protocolentities import *
 from yowsup.layers.protocol_media.protocolentities import *
-from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity
-from yowsup.layers.protocol_receipts.protocolentities import OutgoingReceiptProtocolEntity
+from yowsup.layers.protocol_messages.protocolentities import *
+from yowsup.layers.protocol_profiles.protocolentities import *
+from yowsup.layers.protocol_receipts.protocolentities import *
 
 from src.media_worker import MediaWorker
 from src.models import *
@@ -25,21 +26,19 @@ TEMPLOCATION = "temp"
 
 class WhatsappLayer(YowInterfaceLayer):
 
-    def __init__(self, wttQueue, ttwQueue):
+    def __init__(self):
         super().__init__()
-        self.wttQ = wttQueue
-        self.ttwQ = ttwQueue
-        self.mediaWorker = None
-        self.telegramMessageWorker = None
-        self.offlineMsgQ = Queue()
+        self._mediaWorker = None
+        self._telegramMessageWorker = None
+        self._offlineMsgQ = Queue()
 
         if not os.path.exists(TEMPLOCATION):
             os.makedirs(TEMPLOCATION)
 
     def telegramMessageListener(self):
         while True:
-            if not self.ttwQ.empty():
-                msg = self.ttwQ.get()
+            if not self.getProp("ttwQ").empty():
+                msg = self.getProp("ttwQ").get()
                 if msg.type == "text":
                     outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
                     self.toLower(outgoingMessageProtocolEntity)
@@ -50,7 +49,7 @@ class WhatsappLayer(YowInterfaceLayer):
                     self.media_send(msg.waID, filepath, RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE)
                     # os.remove(temporarylocation)  # TODO Delete file when done
 
-                self.ttwQ.task_done()
+                self.getProp("ttwQ").task_done()
 
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
@@ -67,7 +66,7 @@ class WhatsappLayer(YowInterfaceLayer):
         # wait for the groups to be fetched before handling any incoming messages
         if not groups_ready:
             logger.info("Waiting with message delivery, groups not ready")
-            self.offlineMsgQ.put(messageProtocolEntity)
+            self._offlineMsgQ.put(messageProtocolEntity)
             return
 
         if isinstance(messageProtocolEntity, MediaMessageProtocolEntity):
@@ -97,8 +96,6 @@ class WhatsappLayer(YowInterfaceLayer):
     def onIq(self, entity):
         if isinstance(entity, ListGroupsResultIqProtocolEntity):
             self.onGroupListReceived(entity)
-        elif isinstance(entity, ListParticipantsResultIqProtocolEntity):
-            self.onGroupParticipantsReceived(entity)
 
     def media_send(self, waID, path, mediaType, caption=None):
         entity = RequestUploadIqProtocolEntity(mediaType, filePath=path)
@@ -157,7 +154,7 @@ class WhatsappLayer(YowInterfaceLayer):
                          isGroup=messageProtocolEntity.isGroupMessage(),
                          waID=messageProtocolEntity.getFrom(),
                          filename=filename)
-        self.wttQ.put(msg)
+        self.getProp("wttQ").put(msg)
 
     def onMediaMessage(self, messageProtocolEntity):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
@@ -176,39 +173,43 @@ class WhatsappLayer(YowInterfaceLayer):
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
 
     def processOfflineMessages(self):
-        while not self.offlineMsgQ.empty():
-            self.onMessage(self.offlineMsgQ.get())
-            self.offlineMsgQ.task_done()
+        while not self._offlineMsgQ.empty():
+            self.onMessage(self._offlineMsgQ.get())
+            self._offlineMsgQ.task_done()
 
     def onGroupListReceived(self, entity):
         global groups_ready, groups
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
-            groups.append({"groupId": group.getId(), "subject": group.getSubject().encode('latin-1').decode()})
-            # self.toLower(ParticipantsGroupsIqProtocolEntity(group.getId()))
+            groups.append({"groupId": group.getId(),
+                           "subject": group.getSubject().encode('latin-1').decode(),
+                           "participants": group.getParticipants()})
 
+            # self.toLower(InfoGroupsIqProtocolEntity(group.getId()))
+            # time.sleep(0.5)
+
+        logger.info("Groups ready")
         groups_ready = True  # this is sufficient info to handle incoming messages
 
-        if self.mediaWorker and self.mediaWorker.isAlive():
+        if self._mediaWorker and self._mediaWorker.isAlive():
             pass
         else:
             logger.info("Starting MediaWorker")
-            self.mediaWorker = MediaWorker(self.wttQ, groups)
-            self.mediaWorker.start()
+            self._mediaWorker = MediaWorker(self.getProp("wttQ"), groups)
+            self._mediaWorker.start()
 
-        if self.telegramMessageWorker and self.telegramMessageWorker.isAlive():
+        if self._telegramMessageWorker and self._telegramMessageWorker.isAlive():
             pass
         else:
             logger.info("Listening for Telegram messages")
-            self.telegramMessageWorker = Thread(target=self.telegramMessageListener)
-            self.telegramMessageWorker.start()
+            self._telegramMessageWorker = Thread(target=self.telegramMessageListener)
+            self._telegramMessageWorker.start()
 
         logger.info("Processing offline messages...")
         self.processOfflineMessages()
         logger.info("Offline messages processed")
 
-        # self.getGroupInfo()  # TODO listen to updates instead?
         logger.info("Groups updated")
 
     def onGroupParticipantsReceived(self, entity):
