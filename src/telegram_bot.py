@@ -8,10 +8,12 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 import utils
 from src.models import *
+import src.globalvars as globalvar
 
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 10
+CHAT_PREFIX = "[WA]"
 
 wttQ = None
 ttwQ = None
@@ -37,6 +39,7 @@ def run(wttQueue, ttwQueue, tgsQueue, cfg):
     updater.start_polling()
 
     dp.job_queue.run_repeating(whatsappMessageListener, 1)
+    dp.job_queue.run_repeating(groupStatusListener, 10)
 
 
 def onTextMessage(update, context):
@@ -80,6 +83,21 @@ def whatsappMessageListener(context):
         wttQ.task_done()
 
 
+def groupStatusListener(context):
+    logger.debug("Updating groups")
+    if globalvar.groupsReady:
+        chatMap = utils.get_chatmap()
+        for tgID in chatMap:
+            group = getWhatsappGroup(tgID)
+            if group:
+                chat = context.bot.getChat(tgID)
+                if not chat.title == (CHAT_PREFIX + group["subject"]):
+                    logger.debug(
+                        "Updating group name from {} to {}".format(chat.title, (CHAT_PREFIX + group["subject"])))
+                    context.bot.set_chat_title(tgID, CHAT_PREFIX + group["subject"])
+                    time.sleep(1)
+
+
 def sendToTelegram(context, msg):
     sent = False
     tries = 0
@@ -90,7 +108,7 @@ def sendToTelegram(context, msg):
         tries += 1
 
         if not msg.tgID:  # we need to create a telegram group first
-            chatName = "[WA]" + (msg.title if msg.isGroup else msg.author)
+            chatName = CHAT_PREFIX + (msg.title if msg.isGroup else msg.author)
             if not isQueued:
                 todoChat = CreateChat(chatName, waID=msg.waID)
                 tgsQ.put(todoChat)
@@ -139,7 +157,28 @@ def getTelegramChatID(waID):
 
 def participants(update, context):
     """Send a message when the command /participants issued."""
-    update.message.reply_text('Hi!')
+    msg = "<pre>" \
+          "   Phone Number   |     Name      \n"\
+          "----------------------------------\n"
+    group = getWhatsappGroup(update.message.chat.id)
+
+    if group:
+        for p in group["participants"]:
+            paddedNumber = "{:<18}".format(p.split('@')[0])
+            msg += "{}|  {} \n".format(paddedNumber, "N/A")
+        msg += "</pre>"
+        context.bot.send_message(chat_id=update.message.chat.id,
+                                 text=msg,
+                                 parse_mode=telegram.ParseMode.HTML)
+
+
+def getWhatsappGroup(tgID):
+    if globalvar.groupsReady:
+        chatMap = utils.get_chatmap()
+        for group in globalvar.groups:
+            if chatMap[str(tgID)]["waID"].startswith(group["groupId"]):
+                return group
+    return None
 
 
 def error(update, context):

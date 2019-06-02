@@ -12,6 +12,8 @@ from yowsup.layers.protocol_messages.protocolentities import *
 from yowsup.layers.protocol_profiles.protocolentities import *
 from yowsup.layers.protocol_receipts.protocolentities import *
 
+import src.globalvars as globalvar
+
 from src.media_worker import MediaWorker
 from src.models import *
 from utils import *
@@ -28,9 +30,6 @@ class WhatsappLayer(YowInterfaceLayer):
         self._mediaWorker = None
         self._telegramMessageWorker = None
         self._offlineMsgQ = Queue()
-        self._contacts = []
-        self._groups = []
-        self._groupsReady = False
 
         if not os.path.exists(TEMPLOCATION):
             os.makedirs(TEMPLOCATION)
@@ -57,12 +56,17 @@ class WhatsappLayer(YowInterfaceLayer):
         logger.info('Fetching Whatsapp groups')
         self.toLower(ListGroupsIqProtocolEntity())
 
+        # self.getContactPicture("41764663636@s.whatsapp.net")
+
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
                                                 'read', messageProtocolEntity.getParticipant())
 
-        if not self._groupsReady:
+        if not messageProtocolEntity.isGroup() and messageProtocolEntity.getFrom() not in globalvar.contacts:
+            self.getContactPicture(messageProtocolEntity.getFrom())
+
+        if not globalvar.groupsReady:
             logger.info("Waiting with message ({}) delivery, groups not loaded yet...".format(
                 messageProtocolEntity.getNotify().encode('latin-1').decode()))
             self._offlineMsgQ.put(messageProtocolEntity)
@@ -187,22 +191,22 @@ class WhatsappLayer(YowInterfaceLayer):
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
-            self._groups.append({"groupId": group.getId(),
-                                 "subject": group.getSubject().encode('latin-1').decode(),
-                                 "participants": group.getParticipants()})
-            testid = group.getId()
+            globalvar.groups.append({"groupId": group.getId(),
+                                     "subject": group.getSubject().encode('latin-1').decode(),
+                                     "participants": group.getParticipants()})
+            # testid = group.getId()
 
-            # self.toLower(InfoGroupsIqProtocolEntity(group.getId()))
             # time.sleep(0.5)
+        # self.toLower(InfoGroupsIqProtocolEntity(testid))
 
         logger.info("Groups ready")
-        self._groupsReady = True  # this is sufficient info to handle incoming messages
+        globalvar.groupsReady = True  # this is sufficient info to handle incoming messages
 
         if self._mediaWorker and self._mediaWorker.isAlive():
             pass
         else:
             logger.info("Starting MediaWorker")
-            self._mediaWorker = MediaWorker(self.getProp("wttQ"), self._groups)
+            self._mediaWorker = MediaWorker(self.getProp("wttQ"), globalvar.groups)
             self._mediaWorker.start()
 
         if self._telegramMessageWorker and self._telegramMessageWorker.isAlive():
@@ -218,17 +222,23 @@ class WhatsappLayer(YowInterfaceLayer):
 
         logger.info("Groups updated")
 
-    def onGroupParticipantsReceived(self, entity):
-        logger.debug('Received %d participants in group with id %s', len(entity.getParticipants()), entity.getFrom())
-        # self._groups[entity.getFrom()]._participants = entity.getParticipants()
+    def getContactPicture(self, waID):
+        entity = GetPictureIqProtocolEntity(waID, preview=False)
+        self._sendIq(entity, self.onGetContactPictureResult)
 
-    def getGroupInfo(self, groupId):
-        entity = InfoGroupsIqProtocolEntity(groupId)
-        self.toLower(entity)
+    def onGetContactPictureResult(self, resultGetPictureIqProtocolEntiy, getPictureIqProtocolEntity):
+        # self._contacts[resultGetPictureIqProtocolEntiy.getFrom()] = "test"
+        sData = resultGetPictureIqProtocolEntiy.getPictureData()
+        # bData = str.encode(sData)
+        # f = open('testimage.jpg', 'wb')
+        # f.write(bData)
+        # f.close()
+        # resultGetPictureIqProtocolEntiy.writeToFile("%s_%s.jpg" % (getPictureIqProtocolEntity.getTo(), "preview" if resultGetPictureIqProtocolEntiy.isPreview() else "full"))
+        pass
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]
-        for group in self._groups:
+        for group in globalvar.groups:
             if group["groupId"] == rest:
                 return group["subject"]
         return False
