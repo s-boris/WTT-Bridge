@@ -63,9 +63,6 @@ class WhatsappLayer(YowInterfaceLayer):
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
                                                 'read', messageProtocolEntity.getParticipant())
 
-        if not messageProtocolEntity.isGroup() and messageProtocolEntity.getFrom() not in globalvar.contacts:
-            self.getContactPicture(messageProtocolEntity.getFrom())
-
         if not globalvar.groupsReady:
             logger.info("Waiting with message ({}) delivery, groups not loaded yet...".format(
                 messageProtocolEntity.getNotify().encode('latin-1').decode()))
@@ -191,9 +188,8 @@ class WhatsappLayer(YowInterfaceLayer):
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
-            globalvar.groups.append({"groupId": group.getId(),
-                                     "subject": group.getSubject().encode('latin-1').decode(),
-                                     "participants": group.getParticipants()})
+            globalvar.groups[group.getId()] = {"subject": group.getSubject().encode('latin-1').decode(),
+                                               "participants": group.getParticipants()}
             # testid = group.getId()
 
             # time.sleep(0.5)
@@ -220,21 +216,33 @@ class WhatsappLayer(YowInterfaceLayer):
         self.processOfflineMessages()
         logger.info("Offline messages processed")
 
+        self.updateChatPictures()
+
         logger.info("Groups updated")
+
+    def updateChatPictures(self):
+        chatMap = get_chatmap()
+        for tgID in chatMap:
+            if chatMap[tgID]["waID"]:
+                id = chatMap[tgID]["waID"].partition("@")[0]
+                if '-' in id:
+                    # is group
+                    pass
+                else:
+                    # is contact
+                    self.getContactPicture(chatMap[tgID]["waID"])
+                    time.sleep(1)
 
     def getContactPicture(self, waID):
         entity = GetPictureIqProtocolEntity(waID, preview=False)
         self._sendIq(entity, self.onGetContactPictureResult)
 
     def onGetContactPictureResult(self, resultGetPictureIqProtocolEntiy, getPictureIqProtocolEntity):
-        # self._contacts[resultGetPictureIqProtocolEntiy.getFrom()] = "test"
-        sData = resultGetPictureIqProtocolEntiy.getPictureData()
-        # bData = str.encode(sData)
-        # f = open('testimage.jpg', 'wb')
-        # f.write(bData)
-        # f.close()
-        # resultGetPictureIqProtocolEntiy.writeToFile("%s_%s.jpg" % (getPictureIqProtocolEntity.getTo(), "preview" if resultGetPictureIqProtocolEntiy.isPreview() else "full"))
-        pass
+        logger.info("Updated picture for {}".format(resultGetPictureIqProtocolEntiy.getFrom()))
+        globalvar.contacts[resultGetPictureIqProtocolEntiy.getFrom()] = {
+            "picture": resultGetPictureIqProtocolEntiy.getPictureData(),
+            "updated": False}
+        return True
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]

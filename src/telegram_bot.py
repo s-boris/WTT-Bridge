@@ -40,6 +40,7 @@ def run(wttQueue, ttwQueue, tgsQueue, cfg):
 
     dp.job_queue.run_repeating(whatsappMessageListener, 1)
     dp.job_queue.run_repeating(groupStatusListener, 10)
+    dp.job_queue.run_repeating(contactPictureUpdater, 10)
 
 
 def onTextMessage(update, context):
@@ -81,6 +82,22 @@ def whatsappMessageListener(context):
         msg = wttQ.get()
         sendToTelegram(context, msg)
         wttQ.task_done()
+
+
+def contactPictureUpdater(context):
+    logger.debug("Updating contacts")
+    chatMap = utils.get_chatmap()
+    for tgID in chatMap:
+        contact = getWhatsappContact(tgID)
+        if contact and not contact["updated"]:
+            bio = BytesIO(contact["picture"])
+            img = Image.open(bio)
+            img.save(bio, 'JPEG')
+            bio.seek(0)
+            context.bot.set_chat_photo(tgID, bio)
+            contact["updated"] = True
+            logger.info("Updated contact picture for {}".format(tgID))
+            time.sleep(1)
 
 
 def groupStatusListener(context):
@@ -158,7 +175,7 @@ def getTelegramChatID(waID):
 def participants(update, context):
     """Send a message when the command /participants issued."""
     msg = "<pre>" \
-          "   Phone Number   |     Name      \n"\
+          "   Phone Number   |     Name      \n" \
           "----------------------------------\n"
     group = getWhatsappGroup(update.message.chat.id)
 
@@ -175,9 +192,17 @@ def participants(update, context):
 def getWhatsappGroup(tgID):
     if globalvar.groupsReady:
         chatMap = utils.get_chatmap()
-        for group in globalvar.groups:
-            if chatMap[str(tgID)]["waID"].startswith(group["groupId"]):
-                return group
+        for groupID in globalvar.groups:
+            if chatMap[str(tgID)]["waID"].startswith(groupID):
+                return globalvar.groups[groupID]
+    return None
+
+
+def getWhatsappContact(tgID):
+    chatMap = utils.get_chatmap()
+    for contactID in globalvar.contacts:
+        if chatMap[str(tgID)]["waID"].startswith(contactID):
+            return globalvar.contacts[contactID]
     return None
 
 

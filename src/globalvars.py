@@ -1,4 +1,4 @@
 # global vars, set by whatsapp_layer
-groups = []
-contacts = []
+groups = {}
+contacts = {}
 groupsReady = False
