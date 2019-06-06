@@ -10,17 +10,29 @@ class WTTMessage:
         self.filename = filename
 
 
-class CreateChat:
+class WTTCreateChat:
     def __init__(self, title, waID=None, tgID=None):
         self.title = title
         self.waID = waID
         self.tgID = tgID
 
 
-class UpdateChat:
-    def __init__(self, title, picture, participants, waID=None, tgID=None):
-        self.title = title
+class WTTUpdateChatPicture:
+    def __init__(self, picture, waID=None, tgID=None):
         self.picture = picture
+        self.waID = waID
+        self.tgID = tgID
+
+
+class WTTUpdateChatParticipants:
+    def __init__(self, participants, waID=None, tgID=None):
         self.participants = participants
+        self.waID = waID
+        self.tgID = tgID
+
+
+class WTTUpdateChatSubject:
+    def __init__(self, subject, waID=None, tgID=None):
+        self.subject = subject
         self.waID = waID
         self.tgID = tgID

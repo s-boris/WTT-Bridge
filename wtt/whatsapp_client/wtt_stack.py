@@ -4,18 +4,18 @@ from yowsup.layers import YowLayerEvent
 from yowsup.layers.network import YowNetworkLayer
 from yowsup.stacks import YowStackBuilder
 
-from src.whatsapp_layer import WhatsappLayer
+from wtt.whatsapp_client.wtt_layer import WTTLayer
 
 logger = logging.getLogger(__name__)
 
 
-class WhatsappStack(object):
+class WTTStack(object):
     def __init__(self, profile):
         stackBuilder = YowStackBuilder()
 
         self._stack = stackBuilder \
             .pushDefaultLayers() \
-            .push(WhatsappLayer) \
+            .push(WTTLayer) \
             .build()
 
         self._stack.setProfile(profile)
@@ -28,10 +28,8 @@ class WhatsappStack(object):
         self._stack.loop()
 
 
-def run(wttQueue, ttwQueue, config):
+def run(waBus, config):
     logger.info("Starting Whatsapp Self-Bot")
-
-    stack = WhatsappStack(config["phone"])
-    stack.set_prop("wttQ", wttQueue)
-    stack.set_prop("ttwQ", ttwQueue)
+    stack = WTTStack(config["phone"])
+    stack.set_prop("waBus", waBus)
     stack.start()

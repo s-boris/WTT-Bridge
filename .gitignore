@@ -106,3 +106,4 @@ venv.bak/
 config.json
 anon.session
 chatmap.json
+.idea/

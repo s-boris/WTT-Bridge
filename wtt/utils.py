@@ -14,12 +14,18 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 chatmap_path = dir_path + '/chatmap.json'
 
 config = None
+CHAT_TEMPLATE = {"subject": None, "participants": None, "picture": None}
 
 
 def loadConfig():
     global config
-    with open(dir_path + '/config.json', 'r') as f:
-        config = json.load(f)
+    try:
+        with open(dir_path + '/config.json', 'r') as f:
+            config = json.load(f)
+        return True
+    except Exception as e:
+        logger.error("Unable to read the config.json file: \n" + str(e))
+        return False
 
 
 async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
@@ -37,6 +43,7 @@ async def ensureTelethonSession(phone=None, app_id=None, api_hash=None):
         return False
     await client.disconnect()
     return True
+
 
 def get_chatmap():
     data = {}

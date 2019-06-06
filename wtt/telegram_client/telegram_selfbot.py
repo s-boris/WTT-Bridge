@@ -4,7 +4,7 @@ import logging
 from telethon import TelegramClient
 from telethon.tl.functions.messages import CreateChatRequest, EditChatAdminRequest
 
-import utils
+import wtt.utils as utils
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ async def run(tgsQ, cfg):
         client = await TelegramClient('anon', int(cfg["api_id"]), cfg["api_hash"]).start()
     except Exception as e:
         logger.error("Telethon was unable to start:\n" + str(e))
-        return
+        return False
 
     while True:
         if not tgsQ.empty():

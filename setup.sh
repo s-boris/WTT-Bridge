@@ -14,18 +14,18 @@ if hash python3.7 2>/dev/null; then
 elif hash python3.6 2>/dev/null; then
 	python_installation="python3.6"
 elif hash python3 2>/dev/null; then
-	if [ "${python3[1]}" -ge "5" ]; then # Python3 >= 3.6
+	if [[ "${python3[1]}" -ge "5" ]]; then # Python3 >= 3.6
 		python_installation="python3"
 	fi
 elif hash python 2>/dev/null; then
-	if [ "${python[0]}" -ge "3" ]; then # Python3 >= 3.6
-		if [ "${python[1]}" -ge "5" ]; then # Python3 >= 3.6
+	if [[ "${python[0]}" -ge "3" ]]; then # Python3 >= 3.6
+		if [[ "${python[1]}" -ge "5" ]]; then # Python3 >= 3.6
 			python_installation="python3"
 		fi
 	fi
 fi
 
-if [ "$python_installation" == "ERROR" ]; then
+if [[ "$python_installation" == "ERROR" ]]; then
 	echo "You are running an unsupported Python version."
 	echo "Please use a version of Python above or equals 3.6"
 	exit 1

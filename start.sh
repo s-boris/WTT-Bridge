@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -e config.json ]; then
+if [[ -e config.json ]]; then
 	echo "Starting WTT-Bridge..."
 	./__env/bin/python3 run.py
 else

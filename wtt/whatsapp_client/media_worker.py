@@ -13,16 +13,16 @@ from yowsup.layers.protocol_media.protocolentities \
     VideoDownloadableMediaMessageProtocolEntity, DocumentDownloadableMediaMessageProtocolEntity, \
     ContactMediaMessageProtocolEntity, DownloadableMediaMessageProtocolEntity
 
-from src.models import *
+from wtt.models import *
 
 logger = logging.getLogger(__name__)
 
 
 class MediaWorker(threading.Thread):
-    def __init__(self, wttQueue, groups):
+    def __init__(self, whatsappBus, groups):
         super(MediaWorker, self).__init__()
         self.daemon = True
-        self.wttQ = wttQueue
+        self.waBus = whatsappBus
         self.groups = groups
         self._jobs = Queue()
         self._media_cipher = MediaCipher()
@@ -77,7 +77,7 @@ class MediaWorker(threading.Thread):
                              media_message_protocolentity.getFrom()) if media_message_protocolentity.isGroupMessage() else None),
                          isGroup=media_message_protocolentity.isGroupMessage(),
                          filename=filename)
-        self.wttQ.put(msg)
+        self.waBus.emitEventToTelegram(msg)
 
         return None
 

@@ -1,3 +1,5 @@
+import logging
+import os
 import sys
 import time
 from queue import Queue
@@ -12,58 +14,60 @@ from yowsup.layers.protocol_messages.protocolentities import *
 from yowsup.layers.protocol_profiles.protocolentities import *
 from yowsup.layers.protocol_receipts.protocolentities import *
 
-import src.globalvars as globalvar
-
-from src.media_worker import MediaWorker
-from src.models import *
-from utils import *
+import wtt.utils as utils
+from wtt.models import *
+from wtt.whatsapp_client.media_worker import MediaWorker
 
 logger = logging.getLogger(__name__)
 
 TEMPLOCATION = "temp"
 
 
-class WhatsappLayer(YowInterfaceLayer):
+class WTTLayer(YowInterfaceLayer):
 
     def __init__(self):
         super().__init__()
+
         self._mediaWorker = None
-        self._telegramMessageWorker = None
         self._offlineMsgQ = Queue()
+        self.chats = {}
+        self.ready = False
+
+        self._waBus = None
+        self._waBusThread = None
 
         if not os.path.exists(TEMPLOCATION):
             os.makedirs(TEMPLOCATION)
 
-    def telegramMessageListener(self):
-        while True:
-            if not self.getProp("ttwQ").empty():
-                msg = self.getProp("ttwQ").get()
-                if msg.type == "text":
-                    outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
-                    self.toLower(outgoingMessageProtocolEntity)
-                elif msg.type == "image":
-                    filepath = TEMPLOCATION + "/" + str(time.time()) + msg.filename
-                    img = Image.open(msg.body)
-                    img.save(filepath, 'JPEG')
-                    self.media_send(msg.waID, filepath, RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE)
-                    # os.remove(temporarylocation)  # TODO Delete file when done
-
-                self.getProp("ttwQ").task_done()
+    def onTelegramMessage(self, msg):
+        if msg.type == "text":
+            outgoingMessageProtocolEntity = TextMessageProtocolEntity(msg.body, to=msg.waID)
+            self.toLower(outgoingMessageProtocolEntity)
+        elif msg.type == "image":
+            filepath = TEMPLOCATION + "/" + str(time.time()) + msg.filename
+            img = Image.open(msg.body)
+            img.save(filepath, 'JPEG')
+            self.media_send(msg.waID, filepath, RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE)
+            # os.remove(temporarylocation)  # TODO Delete file when done
 
     @ProtocolEntityCallback("success")
     def onSuccess(self, entity):
         logger.info('Connected with WhatsApp servers')
-        logger.info('Fetching Whatsapp groups')
-        self.toLower(ListGroupsIqProtocolEntity())
 
-        # self.getContactPicture("41764663636@s.whatsapp.net")
+        self._waBus = self.getProp("waBus")
+        self._waBus.setTgMessageListener(self.onTelegramMessage)
+
+        self._waBusThread = Thread(target=self._waBus.run, args=())
+        self._waBusThread.start()
+
+        self.toLower(ListGroupsIqProtocolEntity())  # startup will proceed with onGroupListReceived
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
         receipt = OutgoingReceiptProtocolEntity(messageProtocolEntity.getId(), messageProtocolEntity.getFrom(),
                                                 'read', messageProtocolEntity.getParticipant())
 
-        if not globalvar.groupsReady:
+        if not self.ready:
             logger.info("Waiting with message ({}) delivery, groups not loaded yet...".format(
                 messageProtocolEntity.getNotify().encode('latin-1').decode()))
             self._offlineMsgQ.put(messageProtocolEntity)
@@ -73,7 +77,7 @@ class WhatsappLayer(YowInterfaceLayer):
             self.onMediaMessage(messageProtocolEntity)
             return
         elif isinstance(messageProtocolEntity, TextMessageProtocolEntity):
-            self.sendToTelegram(messageProtocolEntity, messageProtocolEntity.getBody(), isMedia=False)
+            self.forwardMessageToTelegram(messageProtocolEntity, messageProtocolEntity.getBody(), isMedia=False)
             logging.info("Received message from " + messageProtocolEntity.getNotify().encode(
                 'latin-1').decode() + ": " + messageProtocolEntity.getBody())
         else:
@@ -120,15 +124,15 @@ class WhatsappLayer(YowInterfaceLayer):
             successFn = lambda filePath, jid, url: self.doSendMedia(mediaType, filePath, url, jid,
                                                                     resultRequestUploadIqProtocolEntity.getIp(),
                                                                     caption)
-            mediaUploader = WTTMediaUploader(jid, self.getOwnJid(), filePath,
-                                             resultRequestUploadIqProtocolEntity.getUrl(),
-                                             get_wa_config()["phone"],
-                                             resumeOffset=resultRequestUploadIqProtocolEntity.getResumeOffset(),
-                                             successClbk=successFn,
-                                             errorClbk=self.onUploadError,
-                                             progressCallback=self.onUploadProgress,
-                                             asynchronous=False,
-                                             )
+            mediaUploader = utils.WTTMediaUploader(jid, self.getOwnJid(), filePath,
+                                                   resultRequestUploadIqProtocolEntity.getUrl(),
+                                                   utils.get_wa_config()["phone"],
+                                                   resumeOffset=resultRequestUploadIqProtocolEntity.getResumeOffset(),
+                                                   successClbk=successFn,
+                                                   errorClbk=self.onUploadError,
+                                                   progressCallback=self.onUploadProgress,
+                                                   asynchronous=False,
+                                                   )
             mediaUploader.start()
 
     def onRequestUploadError(self, jid, path, errorRequestUploadIqProtocolEntity, requestUploadIqProtocolEntity):
@@ -152,23 +156,13 @@ class WhatsappLayer(YowInterfaceLayer):
 
     # --------------------------------------------------------------
 
-    def sendToTelegram(self, messageProtocolEntity, body, isMedia=False, filename=None):
-        msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),
-                         messageProtocolEntity.getNotify().encode('latin-1').decode(),
-                         body,
-                         title=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
-                         isGroup=messageProtocolEntity.isGroupMessage(),
-                         waID=messageProtocolEntity.getFrom(),
-                         filename=filename)
-        self.getProp("wttQ").put(msg)
-
     def onMediaMessage(self, messageProtocolEntity):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
             logger.debug("Received media message")
             self._mediaWorker.enqueue(messageProtocolEntity)
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_URL:
             logger.debug("Received url message")
-            self.sendToTelegram(messageProtocolEntity, messageProtocolEntity.canonical_url, isMedia=True)
+            self.forwardMessageToTelegram(messageProtocolEntity, messageProtocolEntity.canonical_url, isMedia=True)
             return
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_LOCATION:
             logger.warning("Received location message - not supported yet")
@@ -179,74 +173,92 @@ class WhatsappLayer(YowInterfaceLayer):
         else:
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
 
+    def forwardMessageToTelegram(self, messageProtocolEntity, body, isMedia=False, filename=None):
+        msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),
+                         messageProtocolEntity.getNotify().encode('latin-1').decode(),
+                         body,
+                         title=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
+                         isGroup=messageProtocolEntity.isGroupMessage(),
+                         waID=messageProtocolEntity.getFrom(),
+                         filename=filename)
+        self._waBus.emitEventToTelegram(msg)
+
     def processOfflineMessages(self):
+        logger.info("Processing offline messages...")
         while not self._offlineMsgQ.empty():
             self.onMessage(self._offlineMsgQ.get())
             self._offlineMsgQ.task_done()
+        logger.info("Offline messages processed")
 
     def onGroupListReceived(self, entity):
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
-            globalvar.groups[group.getId()] = {"subject": group.getSubject().encode('latin-1').decode(),
-                                               "participants": group.getParticipants()}
-            # testid = group.getId()
+            if not group.getId() in self.chats:
+                self.chats[group.getId()] = utils.CHAT_TEMPLATE
+            if not self.chats[group.getId()]["subject"] == group.getSubject().encode('latin-1').decode():
+                self.chats[group.getId()]["subject"] = group.getSubject().encode('latin-1').decode()
+                self._waBus.emitEventToTelegram(
+                    WTTUpdateChatSubject(group.getSubject().encode('latin-1').decode(), waID=group.getId()))
+            if not self.chats[group.getId()]["participants"] == group.getParticipants():
+                self.chats[group.getId()]["participants"] = group.getParticipants()
+                self._waBus.emitEventToTelegram(
+                    WTTUpdateChatParticipants(group.getParticipants(), waID=group.getId()))
 
+            # testid = group.getId()
             # time.sleep(0.5)
         # self.toLower(InfoGroupsIqProtocolEntity(testid))
 
-        logger.info("Groups ready")
-        globalvar.groupsReady = True  # this is sufficient info to handle incoming messages
+        logger.info("Group preload done")
 
+        if not self.ready:
+            # this is the first time we received group infos and have sufficient info to handle incoming messages,
+            # which means we will finish the startup procedure
+            self.ready = True
+            self.startMediaWorker()
+            self.processOfflineMessages()
+            self.updateMappedChatPictures()
+
+    def startMediaWorker(self):
         if self._mediaWorker and self._mediaWorker.isAlive():
             pass
         else:
             logger.info("Starting MediaWorker")
-            self._mediaWorker = MediaWorker(self.getProp("wttQ"), globalvar.groups)
+            self._mediaWorker = MediaWorker(self._waBus, self.chats)
             self._mediaWorker.start()
 
-        if self._telegramMessageWorker and self._telegramMessageWorker.isAlive():
-            pass
-        else:
-            logger.info("Listening for Telegram messages")
-            self._telegramMessageWorker = Thread(target=self.telegramMessageListener)
-            self._telegramMessageWorker.start()
-
-        logger.info("Processing offline messages...")
-        self.processOfflineMessages()
-        logger.info("Offline messages processed")
-
-        self.updateChatPictures()
-
-        logger.info("Groups updated")
-
-    def updateChatPictures(self):
-        chatMap = get_chatmap()
+    def updateMappedChatPictures(self):
+        chatMap = utils.get_chatmap()
         for tgID in chatMap:
             if chatMap[tgID]["waID"]:
                 id = chatMap[tgID]["waID"].partition("@")[0]
                 if '-' in id:
-                    # is group
+                    # is group TODO
                     pass
                 else:
                     # is contact
-                    self.getContactPicture(chatMap[tgID]["waID"])
+                    entity = GetPictureIqProtocolEntity(chatMap[tgID]["waID"], preview=False)
+                    self._sendIq(entity, self.onGetContactPictureResult)
                     time.sleep(1)
 
-    def getContactPicture(self, waID):
-        entity = GetPictureIqProtocolEntity(waID, preview=False)
-        self._sendIq(entity, self.onGetContactPictureResult)
+    def onGetContactPictureResult(self, resultGetPictureIqProtocolEntity, getPictureIqProtocolEntity):
+        if not resultGetPictureIqProtocolEntity.getFrom() in self.chats:
+            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = utils.CHAT_TEMPLATE
 
-    def onGetContactPictureResult(self, resultGetPictureIqProtocolEntiy, getPictureIqProtocolEntity):
-        logger.info("Updated picture for {}".format(resultGetPictureIqProtocolEntiy.getFrom()))
-        globalvar.contacts[resultGetPictureIqProtocolEntiy.getFrom()] = {
-            "picture": resultGetPictureIqProtocolEntiy.getPictureData(),
-            "updated": False}
-        return True
+        if not self.chats[resultGetPictureIqProtocolEntity.getFrom()][
+                   "picture"] == resultGetPictureIqProtocolEntity.getPictureData():
+            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = {
+                "picture": resultGetPictureIqProtocolEntity.getPictureData()}
+
+            self._waBus.emitEventToTelegram(
+                WTTUpdateChatPicture(resultGetPictureIqProtocolEntity.getPictureData(),
+                                     waID=resultGetPictureIqProtocolEntity.getFrom()))
+
+            logger.info("Updated picture for {}".format(resultGetPictureIqProtocolEntity.getFrom()))
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]
-        for group in globalvar.groups:
-            if group["groupId"] == rest:
-                return group["subject"]
+        for key in self.chats:
+            if self.chats[key] == rest:
+                return self.chats[key]["subject"]
         return False
