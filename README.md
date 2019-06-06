@@ -37,14 +37,14 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
  Working:
 - Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document, url)
 - Messages from Telegram to Whatsapp (text) 
-- Update contact pictures
-- Update group titles (Whatsapp to Telegram only)
-- Show participants
+- Sync contact pictures
+- Sync group titles (Whatsapp to Telegram only)
+- Show participants (phone numbers only)
   
 TODO:
 - initiate chats from telegram
-- location (live sharing?)
-- Sync group info and pictures
-- Sync profile picture
+- vCard and location (live sharing?)
+- Fully sync group info and pictures
+- Sync owner profile picture
 - Sync receipts
 
