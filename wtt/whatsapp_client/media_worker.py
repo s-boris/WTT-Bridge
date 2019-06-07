@@ -77,7 +77,8 @@ class MediaWorker(threading.Thread):
                              media_message_protocolentity.getFrom()) if media_message_protocolentity.isGroupMessage() else None),
                          isGroup=media_message_protocolentity.isGroupMessage(),
                          filename=filename,
-                         caption=media_message_protocolentity.caption)
+                         caption=media_message_protocolentity.caption if hasattr(media_message_protocolentity,
+                                                                                 'caption') else None)
         self.waBus.emitEventToTelegram(msg)
 
         return None

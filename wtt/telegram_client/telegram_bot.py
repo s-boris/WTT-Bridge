@@ -147,9 +147,20 @@ def onWhatsappMessage(msg):
                 else:
                     bot.send_document(chat_id=msg.tgID, document=bio, caption="*{}*".format(msg.author),
                                       parse_mode=telegram.ParseMode.MARKDOWN, filename=msg.filename)
+            elif msg.type == "location":
+                if msg.caption["name"]:
+                    bot.send_location(chat_id=msg.tgID, latitude=msg.body["latitude"], longitude=msg.body["longitude"],
+                                      caption="*{}*:  {}".format(msg.author, "[{}]({})".format(msg.caption["name"],
+                                                                                               msg.caption["url"])),
+                                      parse_mode=telegram.ParseMode.MARKDOWN)
+                else:
+                    bot.send_location(chat_id=msg.tgID, latitude=msg.body["latitude"], longitude=msg.body["longitude"],
+                                      caption="*{}*".format(msg.author),
+                                      parse_mode=telegram.ParseMode.MARKDOWN)
             sent = True
-    if not tries < MAX_RETRIES:
-        logger.error("Group creation timeout. Message could not be delivered.\n{}:{}".format(msg.author, msg.body))
+
+        if not tries < MAX_RETRIES:
+            logger.error("Group creation timeout. Message could not be delivered.\n{}:{}".format(msg.author, msg.body))
 
 
 def onWhatsappChatPictureUpdate(update):

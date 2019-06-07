@@ -35,7 +35,7 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
 ## Notes
 
  Working:
-- Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document, url)
+- Messages from Whatsapp to Telegram (text, images, video, gif, audio, ptt, document, url, location)
 - Messages from Telegram to Whatsapp (text) 
 - Sync contact pictures (on startup)
 - Sync group titles & pictures (on startup, Whatsapp to Telegram only)
@@ -45,7 +45,6 @@ TODO:
 - Initiate chats from telegram
 - Support for quoted messages
 - Support for deleting messages
-- vCard and location (live sharing?)
 - Sync owner profile picture
 - Sync receipts 
 - Sync online presence

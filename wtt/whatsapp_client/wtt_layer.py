@@ -166,7 +166,21 @@ class WTTLayer(YowInterfaceLayer):
             self.forwardMessageToTelegram(messageProtocolEntity, messageProtocolEntity.canonical_url, isMedia=True)
             return
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_LOCATION:
-            logger.warning("Received location message - not supported yet")
+            location = messageProtocolEntity.message_attributes.location
+            latitude = location.degrees_latitude
+            longitude = location.degrees_longitude
+            name = location.name
+            url = location.url
+            msg = WTTMessage(messageProtocolEntity.media_type,
+                             messageProtocolEntity.getNotify().encode('latin-1').decode(),
+                             {"longitude": longitude, "latitude": latitude},
+                             waID=messageProtocolEntity.getFrom(),
+                             title=(self.groupIdToSubject(
+                                 messageProtocolEntity.getFrom()) if messageProtocolEntity.isGroupMessage() else None),
+                             isGroup=messageProtocolEntity.isGroupMessage(),
+                             filename=None,
+                             caption={"name": name, "url": url})
+            self._waBus.emitEventToTelegram(msg)
             return
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_CONTACT:
             logger.warning("Received vCard message - not supported yet")
