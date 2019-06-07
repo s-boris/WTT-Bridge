@@ -232,15 +232,9 @@ class WTTLayer(YowInterfaceLayer):
         chatMap = utils.get_chatmap()
         for tgID in chatMap:
             if chatMap[tgID]["waID"]:
-                id = chatMap[tgID]["waID"].partition("@")[0]
-                if '-' in id:
-                    # is group TODO
-                    pass
-                else:
-                    # is contact
-                    entity = GetPictureIqProtocolEntity(chatMap[tgID]["waID"], preview=False)
-                    self._sendIq(entity, self.onGetContactPictureResult)
-                    time.sleep(1)
+                entity = GetPictureIqProtocolEntity(chatMap[tgID]["waID"], preview=False)
+                self._sendIq(entity, self.onGetContactPictureResult)
+                time.sleep(1)
 
     def onGetContactPictureResult(self, resultGetPictureIqProtocolEntity, getPictureIqProtocolEntity):
         if not resultGetPictureIqProtocolEntity.getFrom() in self.chats:
