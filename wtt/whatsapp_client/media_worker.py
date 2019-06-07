@@ -71,7 +71,7 @@ class MediaWorker(threading.Thread):
     def _write(self, media_message_protocolentity, data, filename):
         msg = WTTMessage(media_message_protocolentity.media_type,
                          media_message_protocolentity.getNotify().encode('latin-1').decode(),
-                         data,
+                         {"display_name": media_message_protocolentity.display_name, "vcard": data},
                          waID=media_message_protocolentity.getFrom(),
                          title=(self.groupIdToSubject(
                              media_message_protocolentity.getFrom()) if media_message_protocolentity.isGroupMessage() else None),
@@ -80,7 +80,6 @@ class MediaWorker(threading.Thread):
                          caption=media_message_protocolentity.caption if hasattr(media_message_protocolentity,
                                                                                  'caption') else None)
         self.waBus.emitEventToTelegram(msg)
-
         return None
 
     def run(self):

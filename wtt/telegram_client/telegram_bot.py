@@ -1,5 +1,6 @@
 import logging
 import time
+import vobject
 from io import BytesIO
 from threading import Thread
 
@@ -157,6 +158,21 @@ def onWhatsappMessage(msg):
                     bot.send_location(chat_id=msg.tgID, latitude=msg.body["latitude"], longitude=msg.body["longitude"],
                                       caption="*{}*".format(msg.author),
                                       parse_mode=telegram.ParseMode.MARKDOWN)
+            elif msg.type == "contact":
+                svCard = msg.body["vcard"].decode("utf-8")
+                vcard = vobject.readOne(svCard)
+                phoneNumber = ""
+                for tel in vcard.contents['tel']:
+                    phoneNumber = tel.value
+                    break
+                bot.send_contact(chat_id=msg.tgID,
+                                 first_name=msg.body["display_name"].partition(" ")[0],
+                                 last_name=msg.body["display_name"].partition(" ")[1] if len(
+                                     msg.body["display_name"].partition(" ")) > 1 else None,
+                                 phone_number=phoneNumber,
+                                 vcard=svCard,
+                                 parse_mode=telegram.ParseMode.MARKDOWN)
+
             sent = True
 
         if not tries < MAX_RETRIES:

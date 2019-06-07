@@ -158,7 +158,7 @@ class WTTLayer(YowInterfaceLayer):
     # --------------------------------------------------------------
 
     def onMediaMessage(self, messageProtocolEntity):
-        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt"):
+        if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt", "contact"):
             logger.debug("Received media message")
             self._mediaWorker.enqueue(messageProtocolEntity)
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_URL:
@@ -181,9 +181,6 @@ class WTTLayer(YowInterfaceLayer):
                              filename=None,
                              caption={"name": name, "url": url})
             self._waBus.emitEventToTelegram(msg)
-            return
-        elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_CONTACT:
-            logger.warning("Received vCard message - not supported yet")
             return
         else:
             logger.error("Unknown media type %s " % messageProtocolEntity.media_type)
