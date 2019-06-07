@@ -105,12 +105,12 @@ def onWhatsappMessage(msg):
             if msg.type == "text":
                 if msg.isGroup:
                     bot.send_message(chat_id=msg.tgID,
-                                             text="*{}*:\n{}".format(msg.author, msg.body),
-                                             parse_mode=telegram.ParseMode.MARKDOWN)
+                                     text="*{}*:\n{}".format(msg.author, msg.body),
+                                     parse_mode=telegram.ParseMode.MARKDOWN)
                 else:
                     bot.send_message(chat_id=msg.tgID,
-                                             text="{}".format(msg.body),
-                                             parse_mode=telegram.ParseMode.MARKDOWN)
+                                     text="{}".format(msg.body),
+                                     parse_mode=telegram.ParseMode.MARKDOWN)
             elif msg.type == "image":
                 bio = BytesIO(msg.body)
                 img = Image.open(bio)
@@ -123,11 +123,11 @@ def onWhatsappMessage(msg):
             elif msg.type == "audio" or msg.type == "ptt":
                 bio = BytesIO(msg.body)
                 bot.send_audio(chat_id=msg.tgID, audio=bio, caption=msg.author,
-                                       title=msg.filename)
+                               title=msg.filename)
             elif msg.type == "document":
                 bio = BytesIO(msg.body)
                 bot.send_document(chat_id=msg.tgID, document=bio, caption=msg.author,
-                                          filename=msg.filename)
+                                  filename=msg.filename)
             sent = True
     if not tries < MAX_RETRIES:
         logger.error("Group creation timeout. Message could not be delivered.\n{}:{}".format(msg.author, msg.body))
@@ -138,7 +138,7 @@ def onWhatsappChatPictureUpdate(update):
     tgID = getMappedTelegramID(update.waID)
 
     if update.waID not in whatsappChats:
-        whatsappChats[update.waID] = utils.CHAT_TEMPLATE
+        whatsappChats[update.waID] = {"subject": None, "participants": None, "picture": None}
 
     if whatsappChats[update.waID]["picture"] == update.picture:
         logger.debug(
@@ -147,7 +147,7 @@ def onWhatsappChatPictureUpdate(update):
         return
 
     if tgID:
-        logger.info("Updating chat picture for {}".format(tgID))
+        logger.info("Updating chat picture for {}...".format(tgID))
         bio = BytesIO(update.picture)
         img = Image.open(bio)
         img.save(bio, 'JPEG')
@@ -165,7 +165,7 @@ def onWhatsappChatSubjectUpdate(update):
     tgID = getMappedTelegramID(update.waID)
 
     if update.waID not in whatsappChats:
-        whatsappChats[update.waID] = utils.CHAT_TEMPLATE
+        whatsappChats[update.waID] = {"subject": None, "participants": None, "picture": None}
 
     if whatsappChats[update.waID]["subject"] == update.subject:
         logger.debug(
@@ -181,6 +181,7 @@ def onWhatsappChatSubjectUpdate(update):
             logger.info("Updated chat subject from {} to {}".format(chat.title, (CHAT_PREFIX + update.subject)))
         whatsappChats[update.waID]["subject"] = update.subject
     else:
+        whatsappChats[update.waID]["subject"] = update.subject
         logger.debug("Received chat subject update from whatsapp but chat is not mapped to a telegram chat ({})".format(
             update.waID))
 
@@ -190,7 +191,7 @@ def onWhatsappChatParticipantsUpdate(update):
     tgID = getMappedTelegramID(update.waID)
 
     if update.waID not in whatsappChats:
-        whatsappChats[update.waID] = utils.CHAT_TEMPLATE
+        whatsappChats[update.waID] = {"subject": None, "participants": None, "picture": None}
 
     if whatsappChats[update.waID]["participants"] == update.participants:
         logger.debug(
@@ -199,10 +200,10 @@ def onWhatsappChatParticipantsUpdate(update):
         return
 
     if tgID:
-        logger.info("Updating chat participants for {}".format(tgID))
         whatsappChats[update.waID]["participants"] = update.participants
         logger.info("Updated chat participants for {}".format(tgID))
     else:
+        whatsappChats[update.waID]["participants"] = update.participants
         logger.debug(
             "Received chat participants update from whatsapp but chat is not mapped to a telegram chat ({})".format(
                 update.waID))
@@ -210,19 +211,16 @@ def onWhatsappChatParticipantsUpdate(update):
 
 def onParticipantsCommand(update, context):
     """Send a message when the command /participants issued."""
-    msg = "<pre>" \
-          "   Phone Number   |     Name      \n" \
-          "----------------------------------\n"
+    msg = "Participants in this chat:\n"
     group = getWhatsappGroup(update.message.chat.id)
 
     if group:
         for p in group["participants"]:
-            paddedNumber = "{:<18}".format(p.split('@')[0])
-            msg += "{}|  {} \n".format(paddedNumber, "N/A")
-        msg += "</pre>"
+            paddedNumber = "{:<16}".format(p.split('@')[0])
+            msg += "[+{}](tel:+{})| {} \n".format(paddedNumber, p.split('@')[0], "N/A")
         context.bot.send_message(chat_id=update.message.chat.id,
                                  text=msg,
-                                 parse_mode=telegram.ParseMode.HTML)
+                                 parse_mode=telegram.ParseMode.MARKDOWN)
 
 
 def getMappedTelegramID(waID):
@@ -236,18 +234,19 @@ def getMappedTelegramID(waID):
 def getWhatsappGroup(tgID):
     global whatsappChats
     chatMap = utils.get_chatmap()
-    for groupID in whatsappGroups:
+    for groupID in whatsappChats:
         if chatMap[str(tgID)]["waID"].startswith(groupID):
-            return whatsappGroups[groupID]
+            return whatsappChats[groupID]
     return None
 
 
 def getWhatsappContact(tgID):
     global whatsappChats
     chatMap = utils.get_chatmap()
-    for contactID in whatsappContacts:
-        if chatMap[str(tgID)]["waID"].startswith(contactID):
-            return whatsappContacts[contactID]
+    for groupID in whatsappChats:
+        if chatMap[str(tgID)]["waID"].startswith(
+                groupID) and '-' not in groupID:  # group id's have a '-' between two phone numbers
+            return whatsappChats[groupID]
     return None
 
 

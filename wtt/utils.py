@@ -14,7 +14,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 chatmap_path = dir_path + '/chatmap.json'
 
 config = None
-CHAT_TEMPLATE = {"subject": None, "participants": None, "picture": None}
 
 
 def loadConfig():

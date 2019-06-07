@@ -21,6 +21,7 @@ from wtt.whatsapp_client.media_worker import MediaWorker
 logger = logging.getLogger(__name__)
 
 TEMPLOCATION = "temp"
+CHAT_TEMPLATE = {"subject": None, "participants": None, "picture": None}
 
 
 class WTTLayer(YowInterfaceLayer):
@@ -195,7 +196,7 @@ class WTTLayer(YowInterfaceLayer):
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
             if not group.getId() in self.chats:
-                self.chats[group.getId()] = utils.CHAT_TEMPLATE
+                self.chats[group.getId()] = CHAT_TEMPLATE
             if not self.chats[group.getId()]["subject"] == group.getSubject().encode('latin-1').decode():
                 self.chats[group.getId()]["subject"] = group.getSubject().encode('latin-1').decode()
                 self._waBus.emitEventToTelegram(
@@ -243,7 +244,7 @@ class WTTLayer(YowInterfaceLayer):
 
     def onGetContactPictureResult(self, resultGetPictureIqProtocolEntity, getPictureIqProtocolEntity):
         if not resultGetPictureIqProtocolEntity.getFrom() in self.chats:
-            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = utils.CHAT_TEMPLATE
+            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = CHAT_TEMPLATE
 
         if not self.chats[resultGetPictureIqProtocolEntity.getFrom()][
                    "picture"] == resultGetPictureIqProtocolEntity.getPictureData():
