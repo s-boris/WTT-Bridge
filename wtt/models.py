@@ -1,5 +1,5 @@
 class WTTMessage:
-    def __init__(self, type, author, body, waID=None, tgID=None, title=None, isGroup=None, filename=None):
+    def __init__(self, type, author, body, waID=None, tgID=None, title=None, isGroup=None, filename=None, caption=None):
         self.type = type
         self.author = author
         self.body = body
@@ -8,6 +8,7 @@ class WTTMessage:
         self.title = title
         self.isGroup = isGroup
         self.filename = filename
+        self.caption = caption
 
 
 class WTTCreateChat:

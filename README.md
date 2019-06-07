@@ -43,7 +43,10 @@ Each such Whatsapp conversation on Telegram has the prefix "[WA]" in the title.
   
 TODO:
 - Initiate chats from telegram
+- Support for quoted messages
+- Support for deleting messages
 - vCard and location (live sharing?)
 - Sync owner profile picture
-- Sync receipts
+- Sync receipts 
+- Sync online presence
 

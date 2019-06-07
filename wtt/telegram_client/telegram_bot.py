@@ -116,18 +116,37 @@ def onWhatsappMessage(msg):
                 img = Image.open(bio)
                 img.save(bio, 'JPEG')
                 bio.seek(0)
-                bot.send_photo(chat_id=msg.tgID, photo=bio, caption=msg.author)
+                if msg.caption:
+                    bot.send_photo(chat_id=msg.tgID, photo=bio, caption="*{}*:  {}".format(msg.author, msg.caption),
+                                   parse_mode=telegram.ParseMode.MARKDOWN)
+                else:
+                    bot.send_photo(chat_id=msg.tgID, photo=bio, caption="*{}*".format(msg.author),
+                                   parse_mode=telegram.ParseMode.MARKDOWN)
             elif msg.type == "video" or msg.type == "gif":
                 bio = BytesIO(msg.body)
-                bot.send_video(chat_id=msg.tgID, video=bio, caption=msg.author)
+                if msg.caption:
+                    bot.send_video(chat_id=msg.tgID, video=bio, caption="*{}*:  {}".format(msg.author, msg.caption),
+                                   parse_mode=telegram.ParseMode.MARKDOWN)
+                else:
+                    bot.send_video(chat_id=msg.tgID, video=bio, caption="*{}*".format(msg.author),
+                                   parse_mode=telegram.ParseMode.MARKDOWN)
             elif msg.type == "audio" or msg.type == "ptt":
                 bio = BytesIO(msg.body)
-                bot.send_audio(chat_id=msg.tgID, audio=bio, caption=msg.author,
-                               title=msg.filename)
+                if msg.caption:
+                    bot.send_audio(chat_id=msg.tgID, audio=bio, caption="*{}*:  {}".format(msg.author, msg.caption),
+                                   parse_mode=telegram.ParseMode.MARKDOWN, title=msg.filename)
+                else:
+                    bot.send_audio(chat_id=msg.tgID, audio=bio, caption="*{}*".format(msg.author),
+                                   parse_mode=telegram.ParseMode.MARKDOWN, title=msg.filename)
             elif msg.type == "document":
                 bio = BytesIO(msg.body)
-                bot.send_document(chat_id=msg.tgID, document=bio, caption=msg.author,
-                                  filename=msg.filename)
+                if msg.caption:
+                    bot.send_document(chat_id=msg.tgID, document=bio,
+                                      caption="*{}*:  {}".format(msg.author, msg.caption),
+                                      parse_mode=telegram.ParseMode.MARKDOWN, filename=msg.filename)
+                else:
+                    bot.send_document(chat_id=msg.tgID, document=bio, caption="*{}*".format(msg.author),
+                                      parse_mode=telegram.ParseMode.MARKDOWN, filename=msg.filename)
             sent = True
     if not tries < MAX_RETRIES:
         logger.error("Group creation timeout. Message could not be delivered.\n{}:{}".format(msg.author, msg.body))
