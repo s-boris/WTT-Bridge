@@ -21,7 +21,7 @@ from wtt.whatsapp_client.media_worker import MediaWorker
 logger = logging.getLogger(__name__)
 
 TEMPLOCATION = "temp"
-CHAT_TEMPLATE = {"subject": None, "participants": None, "picture": None}
+CHAT_TEMPLATE = {"subject": None, "participants": None}
 
 
 class WTTLayer(YowInterfaceLayer):
@@ -36,6 +36,7 @@ class WTTLayer(YowInterfaceLayer):
 
         self._waBus = None
         self._waBusThread = None
+        self._dao = None
 
         if not os.path.exists(TEMPLOCATION):
             os.makedirs(TEMPLOCATION)
@@ -56,6 +57,7 @@ class WTTLayer(YowInterfaceLayer):
         logger.info('Connected with WhatsApp servers')
 
         self._waBus = self.getProp("waBus")
+        self._dao = self.getProp("dao")
         self._waBus.setTgMessageListener(self.onTelegramMessage)
 
         self._waBusThread = Thread(target=self._waBus.run, args=())
@@ -127,7 +129,7 @@ class WTTLayer(YowInterfaceLayer):
                                                                     caption)
             mediaUploader = utils.WTTMediaUploader(jid, self.getOwnJid(), filePath,
                                                    resultRequestUploadIqProtocolEntity.getUrl(),
-                                                   utils.get_wa_config()["phone"],
+                                                   utils.getWaConfig()["phone"],
                                                    resumeOffset=resultRequestUploadIqProtocolEntity.getResumeOffset(),
                                                    successClbk=successFn,
                                                    errorClbk=self.onUploadError,
@@ -160,6 +162,7 @@ class WTTLayer(YowInterfaceLayer):
     def onMediaMessage(self, messageProtocolEntity):
         if messageProtocolEntity.media_type in ("image", "audio", "video", "document", "gif", "ptt", "contact"):
             logger.debug("Received media message")
+            messageProtocolEntity.subject = self.groupIdToSubject(messageProtocolEntity.getFrom()) or None
             self._mediaWorker.enqueue(messageProtocolEntity)
         elif messageProtocolEntity.media_type == messageProtocolEntity.TYPE_MEDIA_URL:
             logger.debug("Received url message")
@@ -175,8 +178,7 @@ class WTTLayer(YowInterfaceLayer):
                              messageProtocolEntity.getNotify().encode('latin-1').decode(),
                              {"longitude": longitude, "latitude": latitude},
                              waID=messageProtocolEntity.getFrom(),
-                             title=(self.groupIdToSubject(
-                                 messageProtocolEntity.getFrom()) if messageProtocolEntity.isGroupMessage() else None),
+                             subject=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
                              isGroup=messageProtocolEntity.isGroupMessage(),
                              filename=None,
                              caption={"name": name, "url": url})
@@ -189,7 +191,7 @@ class WTTLayer(YowInterfaceLayer):
         msg = WTTMessage((messageProtocolEntity.media_type if isMedia else messageProtocolEntity.getType()),
                          messageProtocolEntity.getNotify().encode('latin-1').decode(),
                          body,
-                         title=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
+                         subject=self.groupIdToSubject(messageProtocolEntity.getFrom()) or None,
                          isGroup=messageProtocolEntity.isGroupMessage(),
                          waID=messageProtocolEntity.getFrom(),
                          filename=filename)
@@ -203,24 +205,30 @@ class WTTLayer(YowInterfaceLayer):
         logger.info("Offline messages processed")
 
     def onGroupListReceived(self, entity):
+        # preload groups (subjects and participants)
         for group in entity.getGroups():
             logger.debug('Received group info with id %s (owner %s, subject %s)', group.getId(), group.getOwner(),
                          group.getSubject())
+
             if not group.getId() in self.chats:
                 self.chats[group.getId()] = CHAT_TEMPLATE
             if not self.chats[group.getId()]["subject"] == group.getSubject().encode('latin-1').decode():
                 self.chats[group.getId()]["subject"] = group.getSubject().encode('latin-1').decode()
-                self._waBus.emitEventToTelegram(
-                    WTTUpdateChatSubject(group.getSubject().encode('latin-1').decode(), waID=group.getId()))
             if not self.chats[group.getId()]["participants"] == group.getParticipants():
                 self.chats[group.getId()]["participants"] = group.getParticipants()
-                self._waBus.emitEventToTelegram(
-                    WTTUpdateChatParticipants(group.getParticipants(), waID=group.getId()))
+
+            for p in group.getParticipants():
+                self._dao.addParticipantToChat(group.getId(), p)
+
+            subject = group.getSubject().encode('latin-1').decode()
+            self._waBus.emitEventToTelegram(WTTUpdateChatSubject(subject, waID=group.getId()))
+
+            participants = group.getParticipants()
+            self._waBus.emitEventToTelegram(WTTUpdateChatParticipants(participants, waID=group.getId()))
 
             # testid = group.getId()
             # time.sleep(0.5)
         # self.toLower(InfoGroupsIqProtocolEntity(testid))
-
         logger.info("Group preload done")
 
         if not self.ready:
@@ -229,6 +237,7 @@ class WTTLayer(YowInterfaceLayer):
             self.ready = True
             self.startMediaWorker()
             self.processOfflineMessages()
+            time.sleep(20)  # give the telegram client some time to create chats and add them to the DB
             self.updateMappedChatPictures()
 
     def startMediaWorker(self):
@@ -236,31 +245,20 @@ class WTTLayer(YowInterfaceLayer):
             pass
         else:
             logger.info("Starting MediaWorker")
-            self._mediaWorker = MediaWorker(self._waBus, self.chats)
+            self._mediaWorker = MediaWorker(self._waBus)
             self._mediaWorker.start()
 
     def updateMappedChatPictures(self):
-        chatMap = utils.get_chatmap()
-        for tgID in chatMap:
-            if chatMap[tgID]["waID"]:
-                entity = GetPictureIqProtocolEntity(chatMap[tgID]["waID"], preview=False)
-                self._sendIq(entity, self.onGetContactPictureResult)
-                time.sleep(1)
+        waChats = self._dao.getMappedWaChatIDs()
+        for waID in waChats:
+            entity = GetPictureIqProtocolEntity(waID[0], preview=False)
+            self._sendIq(entity, self.onGetContactPictureResult)
+            time.sleep(1)
 
     def onGetContactPictureResult(self, resultGetPictureIqProtocolEntity, getPictureIqProtocolEntity):
-        if not resultGetPictureIqProtocolEntity.getFrom() in self.chats:
-            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = CHAT_TEMPLATE
-
-        if not self.chats[resultGetPictureIqProtocolEntity.getFrom()][
-                   "picture"] == resultGetPictureIqProtocolEntity.getPictureData():
-            self.chats[resultGetPictureIqProtocolEntity.getFrom()] = {
-                "picture": resultGetPictureIqProtocolEntity.getPictureData()}
-
-            self._waBus.emitEventToTelegram(
-                WTTUpdateChatPicture(resultGetPictureIqProtocolEntity.getPictureData(),
-                                     waID=resultGetPictureIqProtocolEntity.getFrom()))
-
-            logger.info("Updated picture for {}".format(resultGetPictureIqProtocolEntity.getFrom()))
+        self._waBus.emitEventToTelegram(WTTUpdateChatPicture(resultGetPictureIqProtocolEntity.getPictureData(),
+                                                             waID=resultGetPictureIqProtocolEntity.getFrom()))
+        logger.info("Updated picture for {}".format(resultGetPictureIqProtocolEntity.getFrom()))
 
     def groupIdToSubject(self, groupId):
         rest = groupId.split('@', 1)[0]

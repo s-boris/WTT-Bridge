@@ -19,11 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class MediaWorker(threading.Thread):
-    def __init__(self, whatsappBus, groups):
+    def __init__(self, whatsappBus):
         super(MediaWorker, self).__init__()
         self.daemon = True
         self.waBus = whatsappBus
-        self.groups = groups
         self._jobs = Queue()
         self._media_cipher = MediaCipher()
 
@@ -71,10 +70,10 @@ class MediaWorker(threading.Thread):
     def _write(self, media_message_protocolentity, data, filename):
         msg = WTTMessage(media_message_protocolentity.media_type,
                          media_message_protocolentity.getNotify().encode('latin-1').decode(),
-                         {"display_name": media_message_protocolentity.display_name, "vcard": data},
+                         {"display_name": media_message_protocolentity.display_name,
+                          "vcard": data} if media_message_protocolentity.media_type == "contact" else data,
                          waID=media_message_protocolentity.getFrom(),
-                         title=(self.groupIdToSubject(
-                             media_message_protocolentity.getFrom()) if media_message_protocolentity.isGroupMessage() else None),
+                         subject=media_message_protocolentity.subject if media_message_protocolentity.isGroupMessage() else None,
                          isGroup=media_message_protocolentity.isGroupMessage(),
                          filename=filename,
                          caption=media_message_protocolentity.caption if hasattr(media_message_protocolentity,
@@ -145,9 +144,3 @@ class MediaWorker(threading.Thread):
                 logger.info("Pushing processed media...")
             else:
                 continue
-
-    def groupIdToSubject(self, groupId):
-        rest = groupId.split('@', 1)[0]
-        for group in self.groups:
-            if group["groupId"] == rest:
-                return group["subject"]

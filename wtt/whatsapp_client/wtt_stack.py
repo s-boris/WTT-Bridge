@@ -28,8 +28,9 @@ class WTTStack(object):
         self._stack.loop()
 
 
-def run(waBus, config):
+def run(waBus, config, dao):
     logger.info("Starting Whatsapp Self-Bot")
     stack = WTTStack(config["phone"])
     stack.set_prop("waBus", waBus)
+    stack.set_prop("dao", dao)
     stack.start()
